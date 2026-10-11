@@ -1,0 +1,62 @@
+{
+  "notepad_quick_note": {
+    "name": "notepad_quick_note",
+    "app_name": "notepad",
+    "description": "باز کردن نوت‌پد و یادداشت‌برداری متن",
+    "trigger_phrases": [
+      "یک نوت در نوت پد بنویس",
+      "نوت پد را باز کن و بنویس"
+    ],
+    "steps": [
+      {
+        "action": "launch",
+        "target": "notepad"
+      },
+      {
+        "action": "wait",
+        "ms": 600
+      },
+      {
+        "action": "type",
+        "text": "{text}"
+      }
+    ]
+  },
+  "excel_new_spreadsheet": {
+    "name": "excel_new_spreadsheet",
+    "app_name": "excel",
+    "description": "ایجاد فایل اکسل جدید و آماده‌سازی جدول",
+    "trigger_phrases": [
+      "اکسل را باز کن و جدول جدید بساز"
+    ],
+    "steps": [
+      {
+        "action": "launch",
+        "target": "excel"
+      },
+      {
+        "action": "wait",
+        "ms": 1200
+      },
+      {
+        "action": "hotkey",
+        "key": "ctrl+n"
+      }
+    ]
+  },
+  "save_current_file": {
+    "name": "save_current_file",
+    "app_name": "",
+    "description": "ذخیره فایل در برنامه فعال جاری با میانبر کلیدی",
+    "trigger_phrases": [
+      "این فایل را ذخیره کن",
+      "سیو کن"
+    ],
+    "steps": [
+      {
+        "action": "hotkey",
+        "key": "ctrl+s"
+      }
+    ]
+  }
+}

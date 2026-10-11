@@ -1,0 +1,14 @@
+{
+  "api_keys": [
+    {
+      "key": "YOUR_GEMINI_API_KEY_HERE",
+      "label": "کلید اصلی Gemini",
+      "status": "active",
+      "fail_count": 0,
+      "last_used": 0,
+      "failure_reason": ""
+    }
+  ],
+  "active_index": 0,
+  "updated_at": 1791700000.0
+}

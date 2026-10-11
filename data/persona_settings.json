@@ -1,0 +1,13 @@
+{
+  "gender": "male",
+  "avatar_style": "dj_headset",
+  "user_name": "",
+  "user_role": "",
+  "assistant_custom_name": "نِکسا (NexA)",
+  "relationship_tone": "intimate",
+  "mascot_scale": "medium",
+  "theme_palette": "cyber_cyan",
+  "health_reminders_enabled": true,
+  "daily_greeting_enabled": true,
+  "sync_with_os_theme": true
+}

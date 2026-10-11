@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Caches & Test
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Sensitive Credentials & Local Personal Data (DO NOT COMMIT)
+data/settings.json
+data/peer_ai_settings.json
+data/integrations_config.json
+data/tts_cache/
+.env
+*.env
+
+# Audio recordings / temp media
+*.wav
+*.mp3
+*.tmp
+temp/
+scratch/
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
