@@ -120,3 +120,40 @@ def test_emotion_detection_and_prompting():
     assert "مهربان" in p_caring or "آرامش‌بخش" in p_caring
     assert "استراحت کن" in p_caring
 
+
+def test_gemini_quota_persistence_and_bypass(tmp_path):
+    q_file = tmp_path / "tts_quota_state.json"
+    mock_km = MagicMock()
+    mock_km.get_active_key.return_value = "AIzaFakeKey123"
+
+    engine = TTSEngine(enabled=True, gender="male", key_manager=mock_km, quota_file=q_file)
+    assert engine.is_gemini_quota_exhausted() is False
+
+    # Simulate 429 quota exhaustion recording
+    engine._record_gemini_quota_exhausted(retry_after_sec=3600.0)
+    assert engine.is_gemini_quota_exhausted() is True
+    assert q_file.exists()
+
+    # Create a new engine instance with the same quota file and verify instant fast routing
+    engine2 = TTSEngine(enabled=True, gender="male", key_manager=mock_km, quota_file=q_file)
+    assert engine2.is_gemini_quota_exhausted() is True
+
+    with patch.object(engine2, "_speak_gemini_neural") as mock_gemini:
+        with patch.object(engine2, "_speak_sapi_fallback") as mock_sapi:
+            engine2._speak_worker("سلام من نکسا هستم")
+            # Gemini must be completely bypassed to avoid latency
+            mock_gemini.assert_not_called()
+            mock_sapi.assert_called_once_with("سلام من نکسا هستم")
+
+
+def test_gemini_quota_expiry_reset(tmp_path):
+    q_file = tmp_path / "tts_quota_state.json"
+    engine = TTSEngine(enabled=True, quota_file=q_file)
+
+    # Record past expiry
+    engine._gemini_quota_exhausted = True
+    engine._gemini_quota_exhausted_until = 100.0  # long past epoch
+    assert engine.is_gemini_quota_exhausted() is False
+    assert engine._gemini_quota_exhausted is False
+
+

@@ -103,3 +103,13 @@ def test_new_avatar_styles_and_interactive_expressions(qapp):
     assert mascot.wink_timer == 19
 
 
+def test_mascot_say_decoupled_from_state(qapp):
+    from ui.mascot import MascotState
+    mascot = DesktopMascot()
+    mascot.set_state(MascotState.IDLE)
+    mascot.say("تست پیام حباب سخن", duration_ms=1000)
+    # say() must NOT prematurely force SPEAKING state so lip-sync is strictly audio-driven
+    assert mascot.state == MascotState.IDLE
+
+
+

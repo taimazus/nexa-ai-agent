@@ -70,3 +70,37 @@ def test_persona_manager_os_theme_sync_toggle(tmp_path):
 
     pm_reloaded = PersonaManager(config_path=settings_file)
     assert pm_reloaded.sync_with_os_theme is False
+
+
+def test_bento_grid_themes_and_styles():
+    from ui.styles import get_palette_by_name, AVAILABLE_THEMES
+
+    # Verify all distinct themes exist in catalog
+    assert "bento_dark" in AVAILABLE_THEMES
+    assert "bento_light" in AVAILABLE_THEMES
+    assert "bento_espresso" in AVAILABLE_THEMES
+    assert "oled_obsidian" in AVAILABLE_THEMES
+    assert "nordic_titanium" in AVAILABLE_THEMES
+
+    # Verify Bento Dark design tokens
+    bento_dark = get_palette_by_name("bento_dark")
+    assert bento_dark["style_family"] == "bento"
+    assert bento_dark["is_dark"] is True
+    assert "rgba(28, 28, 32" in bento_dark["bg_glass"]
+    assert bento_dark["pill_bg"] == "#2d2d33"
+
+    # Verify QSS generation produces segmented control and bento cards
+    chat_qss = get_chat_window_qss(bento_dark)
+    assert "FamilyBar" in chat_qss
+    assert "family_chip_active" in chat_qss
+    assert "chip_button" in chat_qss
+    assert "user_card" in chat_qss
+    assert "agent_card" in chat_qss
+
+    # Verify Bento Light design tokens
+    bento_light = get_palette_by_name("bento_light")
+    assert bento_light["style_family"] == "bento"
+    assert bento_light["is_dark"] is False
+    light_qss = get_chat_window_qss(bento_light)
+    assert "FamilyBar" in light_qss
+
