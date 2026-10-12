@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QMenu
-from PyQt6.QtCore import Qt, QPoint, QRectF, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QPoint, QPointF, QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QPainter, QColor, QBrush, QPen, QLinearGradient,
     QRadialGradient, QAction, QPainterPath, QCursor
@@ -49,6 +49,8 @@ class DesktopMascot(QWidget):
     diagnostics_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     avatar_changed = pyqtSignal(str)
+    family_member_switch_requested = pyqtSignal(str)
+    theme_switch_requested = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -154,12 +156,17 @@ class DesktopMascot(QWidget):
         super().leaveEvent(event)
 
     def say(self, message: str, duration_ms: int = 5000):
+        """Displays floating speech bubble. Mouth lip-sync is strictly driven by real-time audio playback."""
         self.speech_bubble.show_message(
             message,
             self.pos(),
             (self.width(), self.height()),
             duration_ms
         )
+
+    def _revert_speaking_to_idle(self):
+        if self.state == MascotState.SPEAKING:
+            self.set_state(MascotState.IDLE)
 
     # --- Mouse Drag & Click Handling ---
     def mousePressEvent(self, event):
@@ -214,6 +221,38 @@ class DesktopMascot(QWidget):
         chat_act = QAction("💬 باز کردن مرکز فرمان و چت", self)
         chat_act.triggered.connect(self.clicked.emit)
         menu.addAction(chat_act)
+
+        # Family Members Submenu
+        family_menu = menu.addMenu("👥 اعضای خانواده نِکسا")
+        family_menu.setStyleSheet(menu.styleSheet())
+        family_members_list = [
+            ("nexamehr", "🛡️ نِکسامِهر (پدر - معمار سیستم و سخت‌افزار)"),
+            ("nexanoo", "🌸 نِکسانو (مادر - هماهنگ‌کننده و سلامت)"),
+            ("samyar", "💻 سامیار (مهندس نرم‌افزار و برنامه‌نویس)"),
+            ("artin", "⚡ آرتین (کنترل ویندوز و نرم‌افزارها)"),
+            ("nila", "🔍 نیلا (جستجوگر وب و تحلیل داده)"),
+            ("tara", "🎨 تارا (طراح خلاق و پردازش تصویر)")
+        ]
+        for m_id, m_title in family_members_list:
+            m_act = QAction(m_title, family_menu)
+            m_act.triggered.connect(lambda ch, mid=m_id: self.family_member_switch_requested.emit(mid))
+            family_menu.addAction(m_act)
+
+        # Theme Styles Submenu (Bento & Modern Aesthetics)
+        theme_menu = menu.addMenu("🍱 تم ظاهری برنامه (Bento UI)")
+        theme_menu.setStyleSheet(menu.styleSheet())
+        themes_list = [
+            ("bento_dark", "🍱 بنتو دارک مدرن (اسلیت و گرافیتی - سبک تصویر)"),
+            ("bento_light", "✨ بنتو سرامیکی لوکس (استودیو سفید)"),
+            ("bento_espresso", "☕ بنتو شکلاتی گرم (Warm Espresso)"),
+            ("oled_obsidian", "🖤 آبسیدین مینیمال (مشکی خالص OLED)"),
+            ("nordic_titanium", "🌊 نوردیک تیتانیوم (آبی و نقره‌ای)"),
+            ("cyber_cyan", "⚡ سایبرپانک نئون (کلاسیک فیروزه‌ای)")
+        ]
+        for t_id, t_title in themes_list:
+            t_act = QAction(t_title, theme_menu)
+            t_act.triggered.connect(lambda ch, tid=t_id: self.theme_switch_requested.emit(tid))
+            theme_menu.addAction(t_act)
 
         # Avatar Submenu
         avatar_menu = menu.addMenu("🎨 تغییر شکلک سه‌بعدی")
@@ -464,10 +503,10 @@ class DesktopMascot(QWidget):
 
             # Specular light (dual Pixar catchlights)
             painter.setBrush(QBrush(QColor(255, 255, 255, 240)))
-            painter.drawEllipse(QPoint(int(cx - 16 + px), int(cy - 6 + py)), 3, 3)
-            painter.drawEllipse(QPoint(int(cx - 13 + px), int(cy - 2 + py)), 1.5, 1.5)
-            painter.drawEllipse(QPoint(int(cx + 15 + px), int(cy - 6 + py)), 3, 3)
-            painter.drawEllipse(QPoint(int(cx + 18 + px), int(cy - 2 + py)), 1.5, 1.5)
+            painter.drawEllipse(QPointF(cx - 16 + px, cy - 6 + py), 3.0, 3.0)
+            painter.drawEllipse(QPointF(cx - 13 + px, cy - 2 + py), 1.5, 1.5)
+            painter.drawEllipse(QPointF(cx + 15 + px, cy - 6 + py), 3.0, 3.0)
+            painter.drawEllipse(QPointF(cx + 18 + px, cy - 2 + py), 1.5, 1.5)
 
         # Expressive Dynamic Eyebrows
         self._draw_expressive_eyebrows(painter, cx, cy - 18, spacing=16, color=primary)
@@ -707,10 +746,10 @@ class DesktopMascot(QWidget):
             painter.drawEllipse(QRectF(cx - 22 + px, cy - 12 + py, 13, 18))
             painter.drawEllipse(QRectF(cx + 9 + px, cy - 12 + py, 13, 18))
             painter.setBrush(QBrush(QColor(255, 255, 255)))
-            painter.drawEllipse(QPoint(int(cx - 18 + px), int(cy - 8 + py)), 3, 3)
-            painter.drawEllipse(QPoint(int(cx - 15 + px), int(cy - 4 + py)), 1.5, 1.5)
-            painter.drawEllipse(QPoint(int(cx + 13 + px), int(cy - 8 + py)), 3, 3)
-            painter.drawEllipse(QPoint(int(cx + 16 + px), int(cy - 4 + py)), 1.5, 1.5)
+            painter.drawEllipse(QPointF(cx - 18 + px, cy - 8 + py), 3.0, 3.0)
+            painter.drawEllipse(QPointF(cx - 15 + px, cy - 4 + py), 1.5, 1.5)
+            painter.drawEllipse(QPointF(cx + 13 + px, cy - 8 + py), 3.0, 3.0)
+            painter.drawEllipse(QPointF(cx + 16 + px, cy - 4 + py), 1.5, 1.5)
 
         # Expressive Eyebrows
         self._draw_expressive_eyebrows(painter, cx, cy - 17, spacing=16, color=QColor(40, 45, 55))

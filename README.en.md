@@ -150,6 +150,24 @@
 
 ---
 
+### 10. Hands-Free Conversational Voice & Intelligent Wake-Word 🗣️🎙️
+- **Human-to-Human Hands-Free Voice Activity Detection (VAD):**
+  - Real-time RMS audio energy monitoring from the microphone.
+  - 300ms pre-speech rolling ring buffer preventing initial syllable clipping.
+  - Automatic pause and silence detection (~0.8s to 1.0s) triggering instant speech packaging and submission without touching any buttons.
+  - **Acoustic Interlock:** Automatically mutes listening while NexA speaks (TTS active) and seamlessly re-engages the listening loop once speech concludes.
+- **Customizable Wake-Word Detection:**
+  - Standby listening mode awakened by calling *"NexA"*, *"Salam NexA"*, or *"Hey NexA"*, unlocking a 30-second fluid conversational dialog window.
+
+---
+
+### 11. Email, Instagram Studio & Autonomous Desktop Macro Learning 📬📸🧠
+- **Enterprise Email Engine via Secure IMAP SSL:** Inbox fetching, read vs unread separation, automated detection of urgent/financial/contract emails, and Persian auditory summaries delegated to **Nila**.
+- **Instagram Content Engine & Browser Automation:** Viral Reels scenario planning (3-second hook, pacing, CTA), Persian caption & trending hashtag crafting delegated to **Tara**, plus instant browser opening (`open_instagram`) and Windows clipboard copying (`copy_caption_to_clipboard`).
+- **Autonomous Windows Macro Workflow Learning (`learn_app_workflow`):** NexA can be taught multi-step workflows for any application, permanently saving them to disk (`data/app_workflows.json`) and autonomously executing them with dynamic parameter substitution (`execute_app_workflow`) delegated to **Artin**.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### Option 1: Double-Click Launcher
@@ -166,7 +184,7 @@ python main.py
 ```powershell
 python -m pytest tests/ -v
 ```
-*(All 65 automated tests pass with green checkmarks).*
+*(All 97 unit and integration tests pass with green checkmarks).*
 
 ---
 
@@ -174,4 +192,5 @@ python -m pytest tests/ -v
 For detailed architectural blueprints, sequence diagrams, and diagnostics, visit the [Wiki Home](docs/wiki/Home.en.md).
 
 </div>
+
 

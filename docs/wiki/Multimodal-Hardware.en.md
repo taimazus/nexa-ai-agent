@@ -1,56 +1,64 @@
 <div lang="en" dir="ltr" align="left">
 
-# Multimodal Hardware Integration (Microphone, Webcam & Speaker) 🎙️📷🔊
+# Multimodal Hardware Integration: Mic, Webcam & Speaker 🎙️📷🔊
 
-**English Version** | [نسخه فارسی](Multimodal-Hardware.fa.md)
+[نسخه فارسی](Multimodal-Hardware.fa.md) | **English Version**
 
-One of the standout capabilities of Nova Desktop AI Agent is its native integration with Windows physical hardware. This transforms the agent from a purely textual assistant into an interactive, multimodal companion.
+A defining capability of the **NexA AI** Desktop Agent by **Rahkar Electronic Sahand** ([irres.ir](https://irres.ir)) is real-time bidirectional communication with physical PC hardware peripherals (microphone, webcam, display, and speakers).
 
 ---
 
-## 1. 🎙️ Microphone Voice Input
+## 1. 🎙️ Microphone Voice Input: Manual & Continuous VAD
 
-- **Dedicated Module:** `agent/audio_recorder.py` built on `PyQt6.QtMultimedia`.
-- **How It Operates:**
-  1. Clicking the microphone button (`🎙️`) in the chat input toolbar immediately initiates recording from the system's default audio input device.
-  2. The button transforms into a pulsing red icon (`⏹️`), updating the status badge to `🎤 Recording audio...`, while the desktop mascot shifts into an attentive posture.
-  3. Clicking the button again stops recording and saves uncompressed audio in `Wave (.wav)` format.
-  4. The audio payload is passed directly to the Gemini 2.5 Flash model as a native audio part (`types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav")`).
-- **Core Benefit:** Gemini 2.5 Flash understands human speech natively (including Persian, English, and multilingual mixing) without requiring slow or error-prone third-party speech-to-text (STT) services.
+NexA provides two distinct audio capture pathways:
+
+### 1.1. Continuous Hands-Free VAD (`ContinuousVoiceListener`):
+- **Module:** `agent/voice_detector.py`
+- **Workflow:**
+  1. Continually reads 30ms audio chunks in the background without UI blocking.
+  2. Measures RMS signal energy. When energy exceeds the threshold, speech state activates, prepending a 300ms pre-speech ring buffer so beginning syllables are preserved.
+  3. When speech stops and a silence timeout (500ms to 1000ms) elapses, the WAV recording finalizes and routes immediately to the Gemini multimodal API.
+  4. An acoustic interlock inhibits microphone recording while the agent speaks through the speakers to avoid acoustic feedback.
+  5. Configurable between **Always-Listening** dialogue mode and **Wake-Word** gated activation.
+
+### 1.2. Manual Push-to-Talk (`AudioRecorder`):
+- **Module:** `agent/audio_recorder.py` powered by `PyQt6.QtMultimedia`.
+- Triggered by clicking the microphone button (`🎙️`) in the chat input bar.
+- Streams uncompressed 16-bit 16kHz WAV audio directly to the multimodal model.
 
 ---
 
 ## 2. 📷 Webcam Vision
 
-- **Dedicated Module:** `capture_webcam` function in `agent/tools.py` using optimized `OpenCV` (`cv2.VideoCapture`).
-- **Access Paths:**
-  - **Quick Camera Button (`📷`):** Takes a crisp snapshot and attaches it to the prompt bar with a preview tag.
-  - **Desktop Mascot Context Menu:** Right-click the desktop pet ➔ Select "📷 دیدن از وب‌کم و تحلیل".
-  - **Autonomous AI Invocation:** If the user asks *"Look through the webcam and describe what I am holding"*, Gemini automatically dispatches the `capture_webcam` tool.
-- **Use Cases:** User presence and face recognition, analyzing physical documents held to the lens, inspecting desk hardware, and real-world visual guidance.
+- **Module:** `capture_webcam` in `agent/tools.py` via `OpenCV` (`cv2.VideoCapture`).
+- **Access Channels:**
+  - **Quick Camera Button (`📷`):** Captures high-res frames and attaches them as chat previews.
+  - **Mascot Context Menu:** Option "📷 Capture Webcam & Analyze".
+  - **Autonomous Tool Triggering:** Invoked when users ask visual questions about their desk or physical environment.
 
 ---
 
 ## 3. 🔊 Speaker Voice Output (TTS)
 
-- **Dedicated Module:** `agent/tts.py` utilizing the native Windows Speech API (`SAPI.SpVoice`).
-- **Key Features:**
-  - **Asynchronous Execution:** Non-blocking background speech synthesis ensures zero UI micro-stutters.
-  - **Persona Voice Matching:**
-    - Active Male Persona (**Arya**): Employs Microsoft David Desktop voice.
-    - Active Female Persona (**Ava**): Employs Microsoft Zira Desktop voice.
-  - **Pre-Speech Cleansing:** Markdown syntax, code blocks, raw URLs, and emojis are cleanly stripped before audio generation.
-  - **Instant Mute Toggle:** The `🔊`/`🔇` button in the chat interface allows one-click muting at any time.
+- **Module:** `agent/tts.py` utilizing the Windows native voice engine (`SAPI.SpVoice`).
+- **Highlights:**
+  - **Asynchronous Playback:** Non-blocking speech synthesis without UI lag.
+  - **Family Voice Persona Matching:**
+    - Male personas (NexaMehr, SamYar, Artin, Parsa): paired with male SAPI voices (`Microsoft David`).
+    - Female personas (NexaNoo, Nila, Tara): paired with female SAPI voices (`Microsoft Zira`).
+  - **Markdown & Code Filtering:** Strips code blocks, URLs, and emojis prior to speech synthesis for natural pronunciation.
+  - **Instant Mute Toggle:** A dedicated mute button (`🔊`/`🔇`) controls audio output.
 
 ---
 
-## 4. Hardware I/O Capability Matrix
+## 4. Hardware Channel Comparison
 
-| Channel | Physical Hardware | Module | Data Format |
-| :--- | :--- | :--- | :--- |
-| **Voice Input** | Laptop / Headset Microphone | `AudioRecorder` | Audio Wave (.wav) 16-bit PCM |
-| **Vision Input (Webcam)** | Integrated or USB Webcam | `cv2.VideoCapture` | JPEG Image Frame (640x480+) |
-| **Vision Input (Desktop)** | Display Monitor | `Pillow ImageGrab` | Fullscreen PNG Screenshot |
-| **Audio Output** | System Speakers / Headphones | `SAPI.SpVoice` | Audio PCM Stream |
+| Channel | Hardware Device | Supporting Module | Data Format | Operational Mode |
+| :--- | :--- | :--- | :--- | :--- |
+| **Continuous Voice (VAD)** | Microphone | `ContinuousVoiceListener` | WAV 16kHz PCM | Hands-free autonomous |
+| **Manual Audio Input** | Microphone | `AudioRecorder` | WAV 16kHz PCM | User push-to-talk button |
+| **Visual Input (Webcam)** | Integrated/USB Camera | `cv2.VideoCapture` | JPEG Image Frame | On-demand snapshots |
+| **Visual Input (Desktop)** | Display Monitor | `Pillow ImageGrab` | Fullscreen PNG | Telemetry and inspection |
+| **Audio Output (TTS)** | Speakers / Headphones | `SAPI.SpVoice` | Audio PCM Stream | Asynchronous & gender-matched |
 
 </div>

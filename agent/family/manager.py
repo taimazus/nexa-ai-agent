@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -23,6 +24,7 @@ class FamilyManager:
         self.profiles_path = profiles_path or DEFAULT_FAMILY_PATH
         self.members: Dict[str, FamilyMember] = {}
         self.active_member_id: str = "nexanoo"
+        self._lock = threading.Lock()
         self._load_profiles()
 
     def _load_profiles(self):
@@ -42,24 +44,27 @@ class FamilyManager:
             logger.error(f"Error loading family profiles: {exc}", exc_info=True)
 
     def save_profiles(self) -> bool:
-        """Saves current state and learned skills of all family members to disk."""
-        try:
-            self.profiles_path.parent.mkdir(parents=True, exist_ok=True)
-            data = {
-                "active_member_id": self.active_member_id,
-                "company_attribution": {
-                    "name": "راهکار الکترونیک سهند",
-                    "website": "https://irres.ir"
-                },
-                "members": {m_id: member.to_dict() for m_id, member in self.members.items()}
-            }
-            with open(self.profiles_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.info("Saved family profiles and learned skills successfully.")
-            return True
-        except Exception as exc:
-            logger.error(f"Failed to save family profiles: {exc}", exc_info=True)
-            return False
+        """Saves current state and learned skills of all family members to disk atomically."""
+        with self._lock:
+            try:
+                self.profiles_path.parent.mkdir(parents=True, exist_ok=True)
+                data = {
+                    "active_member_id": self.active_member_id,
+                    "company_attribution": {
+                        "name": "راهکار الکترونیک سهند",
+                        "website": "https://irres.ir"
+                    },
+                    "members": {m_id: member.to_dict() for m_id, member in self.members.items()}
+                }
+                temp_file = self.profiles_path.with_suffix(".tmp")
+                with open(temp_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                temp_file.replace(self.profiles_path)
+                logger.info("Saved family profiles and learned skills successfully.")
+                return True
+            except Exception as exc:
+                logger.error(f"Failed to save family profiles: {exc}", exc_info=True)
+                return False
 
     def get_active_member(self) -> FamilyMember:
         """Returns the currently active family member."""
@@ -265,6 +270,27 @@ class FamilyManager:
         res = member.teach_skill(skill_name, instruction_steps, category=category)
         self.save_profiles()
         return res
+
+    def remember_member_fact(self, member_id_or_name: Optional[str], key: str, value: Any) -> Dict[str, Any]:
+        """Stores a persistent memory for a specific member or the active member, and saves to file."""
+        member = self.find_member(member_id_or_name) if member_id_or_name else self.get_active_member()
+        if not member:
+            member = self.get_active_member()
+        res = member.remember_fact(key, value)
+        self.save_profiles()
+        return res
+
+    def recall_member_facts(self, member_id_or_name: Optional[str] = None, query: str = "") -> Dict[str, Any]:
+        """Recalls memories for a member or all members."""
+        if member_id_or_name:
+            member = self.find_member(member_id_or_name)
+            if member:
+                return {member.name: member.recall_facts(query)}
+        return {
+            m.name: m.recall_facts(query)
+            for m in self.members.values()
+            if m.recall_facts(query)
+        }
 
     def list_family_members(self) -> List[Dict[str, Any]]:
         """Returns structured list of all family members."""

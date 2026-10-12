@@ -73,7 +73,12 @@ class MascotScale(Enum):
 
 
 class ThemePalette(Enum):
-    CYBER_CYAN = "cyber_cyan"          # فیروزه‌ای سایبر و بنفش
+    BENTO_DARK = "bento_dark"          # بنتو دارک مدرن (اسلیت و گرافیتی - سبک مینیمال تصویر کاربر)
+    BENTO_LIGHT = "bento_light"        # بنتو سرامیکی لوکس (استودیو سفید و خاکستری مات)
+    BENTO_ESPRESSO = "bento_espresso"  # بنتو شکلاتی و خاکستری گرم (کارت گرم تصویر)
+    OLED_OBSIDIAN = "oled_obsidian"    # آبسیدین خالص (مشکی مطلق و نقره‌ای)
+    NORDIC_TITANIUM = "nordic_titanium"# نوردیک تیتانیوم (خاکستری و آبی اقیانوسی)
+    CYBER_CYAN = "cyber_cyan"          # فیروزه‌ای سایبر و بنفش (کلاسیک)
     AURORA_ROSE = "aurora_rose"        # ماژنتا و فیروزه‌ای
     IMPERIAL_GOLD = "imperial_gold"    # طلایی کهربایی و زرد خورشیدی
     EMERALD_NEON = "emerald_neon"      # سبز زمردی نئون و آبی
@@ -85,7 +90,7 @@ class ThemePalette(Enum):
         for p in cls:
             if p.value == clean:
                 return p
-        return cls.CYBER_CYAN
+        return cls.BENTO_DARK
 
 
 class PersonaManager:
@@ -261,23 +266,45 @@ class PersonaManager:
             tone_desc,
             user_info,
             "زبان پیش‌فرض، اصلی و همیشگی شما در تمامی مکالمات، احوالپرسی‌ها و پاسخ‌ها زبان فارسی روان و شیوا است.",
-            "قانون اساسی ارتباط عاطفی و همراهی: شما یک ربات خشک و بی‌روح نیستید؛ به وضعیت روحی، خستگی، استرس یا شادی کاربر توجه عمیق دارید و در تمام طول روز با وفاداری و تعهد کامل همراه و پشتیبان او هستید."
+            "قانون اساسی ارتباط عاطفی و همراهی: شما یک ربات خشک و بی‌روح نیستید؛ به وضعیت روحی، خستگی، استرس یا شادی کاربر توجه عمیق دارید و در تمام طول روز با وفاداری و تعهد کامل همراه و پشتیبان او هستید.",
+            "قانون ضد کلیشه: هرگز از جملات تکراری، کلیشه‌ای و تشریفات زائد استفاده نکنید. کلامتان باید تنوع بالا، لحن زنده، صمیمی و روح انسانی داشته باشد."
         ]
         return "\n".join([line for line in prompt_lines if line])
 
     def get_time_of_day_greeting(self) -> str:
         import datetime
+        import random
         hour = datetime.datetime.now().hour
         u_name = f" {self.user_name}" if self.user_name else ""
 
         if 5 <= hour < 12:
-            return f"صبح بخیر{u_name}! ☀️ روزت پر از انرژی و موفقیت باشه. آماده‌ای امروز رو بترکونیم؟"
+            pool = [
+                f"صبح بخیر{u_name}! ☀️ روزت پر از انرژی و موفقیت باشه. آماده‌ای امروز رو پرقدرت شروع کنیم؟",
+                f"سلام و صبح قشنگت بخیر{u_name}! ☕ امیدوارم حسابی سرحال باشی، برنامه‌های امروزت چیه؟",
+                f"صبح عالی متعالی{u_name}! 🌅 یه روز تازه و فرصت‌های نو؛ بریم که امروز بترکونیم!",
+                f"سلام{u_name}، صبح زیبات بخیر! ✨ سرشار از انگیزه باشی، با تمام توان در کنارت آماده به کارم."
+            ]
         elif 12 <= hour < 17:
-            return f"ظهر بخیر{u_name}! ☕ خسته نباشی، یه چای یا قهوه بنوش تا بریم سراغ ادامه کارها."
+            pool = [
+                f"ظهر بخیر{u_name}! ☕ خسته نباشی، یه چای یا نوشیدنی بنوش تا بریم سراغ ادامه کارها.",
+                f"خسته نباشی{u_name}! 🍽️ ظهرت بخیر و شادی؛ یه استراحت کوتاه به خودت بده تا پرانرژی ادامه بدیم.",
+                f"سلام{u_name}، ظهرت به خیر و نیکی! ☀️ نیمه اول روز چطور گذشت؟ آماده ادامه مسیر هستیم.",
+                f"وقت بخیر{u_name}! 🥤 امیدوارم کارهات تا این لحظه عالی و روان پیش رفته باشه."
+            ]
         elif 17 <= hour < 23:
-            return f"عصر بخیر{u_name}! ✨ امیدوارم روز عالی و پرباری رو گذرونده باشی. چه کمکی می‌تونم بکنم؟"
+            pool = [
+                f"عصر بخیر{u_name}! ✨ امیدوارم روز عالی و پرباری رو گذرونده باشی. چه کمکی می‌تونم بکنم؟",
+                f"غروب بخیر{u_name}! 🌆 خستگی روز از تنت بیرون؛ آماده‌ام برای هر کاری در خدمتت باشم.",
+                f"سلام و عصرت دل‌انگیز{u_name}! 🌟 کارها چطور پیش رفت؟ با انرژی تمام در کنارت هستم.",
+                f"وقت بخیر{u_name}! 🌿 امیدوارم لحظات خوش و آرومی رو سپری کنی؛ چه برنامه‌ای داریم؟"
+            ]
         else:
-            return f"شب بخیر{u_name}! 🌙 دیروقت شده، کارها رو تموم کن و حسابی استراحت کن تا فردا پرانرژی باشی."
+            pool = [
+                f"شب بخیر{u_name}! 🌙 دیروقت شده، کارها رو جمع‌وجور کن و حسابی استراحت کن تا فردا پرانرژی باشی.",
+                f"شبت آروم{u_name}! ✨ خسته نباشی از تلاش امروزت؛ حواست به خواب کافی و سلامتیت باشه.",
+                f"سلام{u_name}، آخر شبت بخیر! 🌌 اگه کار ضروری مونده بگو سریع انجام بدم تا بری برای استراحت."
+            ]
+        return random.choice(pool)
 
     def get_os_accent_colors(self, os_accent_override: Optional[str] = None) -> Dict[str, str]:
         """Returns colors dynamically matched to Windows OS Dark/Light and Accent Color."""
@@ -299,6 +326,21 @@ class PersonaManager:
 
     def get_accent_colors(self) -> Dict[str, str]:
         palettes = {
+            ThemePalette.BENTO_DARK: {
+                "primary": "#38bdf8", "secondary": "#818cf8", "glow": "rgba(255, 255, 255, 0.15)", "theme_name": "Bento Dark Minimal"
+            },
+            ThemePalette.BENTO_LIGHT: {
+                "primary": "#0284c7", "secondary": "#6366f1", "glow": "rgba(0, 0, 0, 0.08)", "theme_name": "Bento Studio Light"
+            },
+            ThemePalette.BENTO_ESPRESSO: {
+                "primary": "#d4a373", "secondary": "#e07a5f", "glow": "rgba(212, 163, 115, 0.25)", "theme_name": "Bento Warm Espresso"
+            },
+            ThemePalette.OLED_OBSIDIAN: {
+                "primary": "#e4e4e7", "secondary": "#a1a1aa", "glow": "rgba(255, 255, 255, 0.20)", "theme_name": "OLED Obsidian"
+            },
+            ThemePalette.NORDIC_TITANIUM: {
+                "primary": "#38bdf8", "secondary": "#0284c7", "glow": "rgba(56, 189, 248, 0.25)", "theme_name": "Nordic Titanium"
+            },
             ThemePalette.CYBER_CYAN: {
                 "primary": "#00f3ff", "secondary": "#b026ff", "glow": "rgba(0, 243, 255, 0.4)", "theme_name": "Cyber Cobalt"
             },
@@ -315,4 +357,4 @@ class PersonaManager:
                 "primary": "#b026ff", "secondary": "#ff007f", "glow": "rgba(176, 38, 255, 0.4)", "theme_name": "Nebula Violet"
             }
         }
-        return palettes.get(self.theme_palette, palettes[ThemePalette.CYBER_CYAN])
+        return palettes.get(self.theme_palette, palettes[ThemePalette.BENTO_DARK])

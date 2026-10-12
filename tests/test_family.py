@@ -242,3 +242,50 @@ class TestFamilyMultiAgentSystem:
                 }
             )
 
+    def test_member_remember_and_recall_facts(self):
+        """Verify family member can record personal memories and inject them into prompt context."""
+        member = FamilyMember({
+            "id": "samyar",
+            "name": "سامیار",
+            "gender": "male",
+            "role_title": "مهندس نرم‌افزار",
+            "xp": 100,
+            "level": 2
+        })
+        res = member.remember_fact("زبان برنامه‌نویسی مورد علاقه کاربر", "پایتون و تایپ‌اسکریپت")
+        assert res["success"] is True
+        assert member.xp == 110  # gained 10 XP
+        recalled = member.recall_facts("پایتون")
+        assert "زبان برنامه‌نویسی مورد علاقه کاربر" in recalled
+        prompt = member.get_prompt_context()
+        assert "خاطرات، دانسته‌ها و یادداشت‌های شخصی" in prompt
+        assert "پایتون و تایپ‌اسکریپت" in prompt
+
+    def test_family_manager_member_fact_persistence(self, tmp_path):
+        """Verify FamilyManager persists member-specific memories to disk."""
+        fake_json = tmp_path / "family_memories.json"
+        base_data = {
+            "active_member_id": "artin",
+            "members": {
+                "artin": {
+                    "id": "artin",
+                    "name": "آرتین",
+                    "gender": "male",
+                    "role_title": "کنترل ویندوز",
+                    "memories": {}
+                }
+            }
+        }
+        with open(fake_json, "w", encoding="utf-8") as f:
+            json.dump(base_data, f)
+
+        fm = FamilyManager(profiles_path=fake_json)
+        fm.remember_member_fact("artin", "برنامه کاری کاربر", "هر روز ساعت ۹ صبح در VS Code")
+        
+        # Verify persistence
+        fm2 = FamilyManager(profiles_path=fake_json)
+        artin = fm2.find_member("artin")
+        assert artin is not None
+        assert "برنامه کاری کاربر" in artin.memories
+        assert artin.memories["برنامه کاری کاربر"] == "هر روز ساعت ۹ صبح در VS Code"
+

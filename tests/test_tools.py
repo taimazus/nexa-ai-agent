@@ -78,3 +78,23 @@ def test_capture_webcam_runs_or_reports(tmp_path):
     else:
         assert "error" in res
 
+
+def test_file_operations_safe_deletion(tmp_path):
+    # Safe deletion of disposable file
+    temp_file = tmp_path / "temp_delete_me.txt"
+    temp_file.write_text("حذف تستی", encoding="utf-8")
+    del_res = file_operations("delete", str(temp_file))
+    assert del_res["success"] is True
+    assert not temp_file.exists()
+
+
+def test_file_operations_blocks_protected_deletion():
+    # Attempting to delete system drive or root paths must be blocked
+    res_drive = file_operations("delete", "C:\\")
+    assert res_drive["success"] is False
+    assert "مسدود" in res_drive["error"] or "حساس" in res_drive["error"]
+
+    res_win = file_operations("delete", "C:\\Windows")
+    assert res_win["success"] is False
+    assert "مسدود" in res_win["error"] or "حساس" in res_win["error"]
+

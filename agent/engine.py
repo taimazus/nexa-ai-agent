@@ -77,6 +77,7 @@ class AgentEngine:
             "list_open_windows": tools.list_open_windows,
             "launch_or_focus_app": tools.launch_or_focus_app,
             "send_app_keys": tools.send_app_keys,
+            "send_keys": tools.send_app_keys,
             "click_screen": tools.click_screen,
             "close_app": tools.close_app,
             "switch_family_member": self.family_manager.switch_member,
@@ -84,6 +85,8 @@ class AgentEngine:
             "list_family_members": self.family_manager.list_family_members,
             "customize_family_member": self.family_manager.update_member,
             "add_family_member": self.family_manager.add_member,
+            "remember_family_fact": self.family_manager.remember_member_fact,
+            "recall_family_facts": self.family_manager.recall_member_facts,
             "check_emails": self.email_service.check_emails,
             "send_email": self.email_service.send_email,
             "configure_email_settings": self.services_config.update_email_config,
@@ -192,6 +195,10 @@ class AgentEngine:
             """Saves a permanent fact, note, or preference into long-term memory."""
             self._notify_tool("remember_fact", f"ثبت در حافظه: {key}")
             res = self.memory_manager.remember_fact(key, value, category)
+            active_m = self.family_manager.get_active_member()
+            if active_m:
+                active_m.remember_fact(key, value)
+                self.family_manager.save_profiles()
             self._notify_tool_done("remember_fact", {"key": key, "value": value}, res)
             return res
 
@@ -206,6 +213,10 @@ class AgentEngine:
             """Deletes a fact from long-term memory."""
             self._notify_tool("forget_fact", f"حذف از حافظه: {key}")
             res = self.memory_manager.forget_fact(key)
+            active_m = self.family_manager.get_active_member()
+            if active_m and key in active_m.memories:
+                del active_m.memories[key]
+                self.family_manager.save_profiles()
             self._notify_tool_done("forget_fact", {"key": key}, res)
             return res
 
@@ -213,6 +224,10 @@ class AgentEngine:
             """Records a lesson learned from a mistake or correction to prevent repeating it."""
             self._notify_tool("record_learning", f"یادگیری درس جدید: {trigger[:40]}")
             res = self.learning_engine.record_learning(trigger, corrective_rule, category)
+            active_m = self.family_manager.get_active_member()
+            if active_m:
+                active_m.gain_xp(30)
+                self.family_manager.save_profiles()
             self._notify_tool_done("record_learning", {"trigger": trigger, "rule": corrective_rule}, res)
             return res
 
@@ -272,7 +287,7 @@ class AgentEngine:
             self._notify_tool_done("launch_or_focus_app", {"app": app_name_or_path}, res)
             return res
 
-        def wrapped_send_keys(keys_or_text: Optional[str] = None, hotkey: Optional[str] = None, app_name_or_title: Optional[str] = None) -> Dict[str, Any]:
+        def send_app_keys(keys_or_text: Optional[str] = None, hotkey: Optional[str] = None, app_name_or_title: Optional[str] = None) -> Dict[str, Any]:
             """Sends hotkeys (e.g. 'ctrl+s', 'alt+f4', 'enter') or types text into an application window."""
             target_desc = f" در {app_name_or_title}" if app_name_or_title else ""
             desc = f"ارسال کلید {hotkey}{target_desc}" if hotkey else f"تایپ متن{target_desc}"
@@ -280,6 +295,12 @@ class AgentEngine:
             res = tools.send_app_keys(keys_or_text=keys_or_text, hotkey=hotkey, app_name_or_title=app_name_or_title)
             self._notify_tool_done("send_app_keys", {"hotkey": hotkey, "app": app_name_or_title}, res)
             return res
+
+        def send_keys(keys_or_text: Optional[str] = None, hotkey: Optional[str] = None, app_name_or_title: Optional[str] = None) -> Dict[str, Any]:
+            """Sends hotkeys (e.g. 'ctrl+s', 'alt+f4', 'enter') or types text into an application window."""
+            return send_app_keys(keys_or_text=keys_or_text, hotkey=hotkey, app_name_or_title=app_name_or_title)
+
+        wrapped_send_keys = send_app_keys
 
         def wrapped_click(x: Optional[int] = None, y: Optional[int] = None, button: str = "left", clicks: int = 1, app_name_or_title: Optional[str] = None) -> Dict[str, Any]:
             """Clicks the mouse at specified coordinates or inside an application."""
@@ -473,8 +494,9 @@ class AgentEngine:
             if parameters:
                 try:
                     parsed_params = py_json.loads(parameters) if isinstance(parameters, str) else parameters
-                except Exception:
-                    pass
+                except Exception as parse_err:
+                    logger.warning(f"Failed to parse parameters JSON string for workflow '{workflow_name}': {parse_err}")
+                    parsed_params = {}
             res = self.app_controller.execute_workflow(workflow_name=workflow_name, parameters=parsed_params)
             self._notify_tool_done("execute_app_workflow", {"workflow": workflow_name}, res)
             return res
@@ -491,6 +513,8 @@ class AgentEngine:
             wrapped_list_apps,
             wrapped_list_windows,
             wrapped_launch_or_focus,
+            send_app_keys,
+            send_keys,
             wrapped_send_keys,
             wrapped_click,
             wrapped_close_app,
@@ -615,7 +639,18 @@ class AgentEngine:
                 else:
                     response = self.chat.send_message(message=parts)
 
-                reply_text = response.text or "دستور شما با موفقیت انجام شد."
+                if response.text:
+                    reply_text = response.text
+                else:
+                    import random
+                    dynamic_replies = [
+                        "انجام شد! نتیجه آماده‌ست.",
+                        "ردیف شد، کار رو دقیق انجام دادم.",
+                        "حله! دستور رو کامل اجرا کردم.",
+                        "تمام شد، هر کاری که لازم بود مرتب انجام شد.",
+                        "فرمان اجرا شد و همه چیز روبه‌راهه."
+                    ]
+                    reply_text = random.choice(dynamic_replies)
                 
                 # Reward member with XP and save
                 delegated_member.gain_xp(15)

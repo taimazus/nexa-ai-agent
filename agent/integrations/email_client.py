@@ -230,9 +230,12 @@ class EmailService:
             if mail:
                 try:
                     mail.close()
+                except Exception as close_exc:
+                    logger.debug(f"IMAP close error: {close_exc}")
+                try:
                     mail.logout()
-                except Exception:
-                    pass
+                except Exception as logout_exc:
+                    logger.debug(f"IMAP logout error: {logout_exc}")
 
     def send_email(
         self,

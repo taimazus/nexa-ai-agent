@@ -147,3 +147,16 @@ def test_engine_registers_app_controller_tools():
         assert "wrapped_learn_workflow" in callable_names
         assert "wrapped_list_workflows" in callable_names
         assert "wrapped_execute_workflow" in callable_names
+
+
+def test_app_control_handles_injection_safely(app_controller):
+    """Verify that quotes and injection characters are base64-encoded safely."""
+    with patch.object(app_controller, "_run_powershell") as mock_ps:
+        mock_ps.return_value = {"success": True, "stdout": "WINDOW_NOT_FOUND\n", "stderr": ""}
+        res = app_controller.inspect_app_ui(app_name_or_title='notepad"; Start-Process calc.exe; #')
+        # Check that the script sent to PowerShell uses base64 decoding expression rather than raw string
+        assert mock_ps.called
+        called_script = mock_ps.call_args[0][0]
+        assert "FromBase64String" in called_script
+        assert 'notepad"; Start-Process' not in called_script
+        assert res["success"] is False

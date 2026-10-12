@@ -71,7 +71,7 @@ class ContinuousVoiceListener(QObject):
         self._is_speaking = False
         self._speech_start_time: float = 0.0
         self._last_speech_time: float = 0.0
-        self._noise_floor: float = 250.0
+        self._noise_floor: float = 120.0
 
         # Buffers:
         # Pre-speech ring buffer holds ~300ms of audio (approx 10 chunks of 480 samples each)
@@ -121,13 +121,13 @@ class ContinuousVoiceListener(QObject):
         """Calculates dynamic speech detection threshold based on sensitivity and ambient floor."""
         if self.sensitivity == "high":
             # Sensitive to whispers and quiet speech
-            return max(220.0, self._noise_floor * 1.8)
+            return max(150.0, self._noise_floor * 1.5)
         elif self.sensitivity == "low":
             # High noise gate for noisy environments
-            return max(650.0, self._noise_floor * 3.5)
+            return max(500.0, self._noise_floor * 3.0)
         else:
-            # Medium: standard desktop environment
-            return max(380.0, self._noise_floor * 2.5)
+            # Medium: standard desktop environment (normal comfortable speaking distance)
+            return max(240.0, self._noise_floor * 1.8)
 
     # --- Lifecycle Controls ---
     def is_running(self) -> bool:

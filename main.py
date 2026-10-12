@@ -66,7 +66,7 @@ def main():
     from ui.settings_window import SettingsWindow
     from ui.theme_detector import WindowsThemeDetector
     from ui.styles import (
-        get_palette_for_theme, get_chat_window_qss,
+        get_palette_for_theme, get_palette_by_name, get_chat_window_qss,
         get_settings_qss, get_speech_bubble_qss
     )
 
@@ -102,24 +102,35 @@ def main():
         services_config=agent_engine.services_config
     )
 
-    # Function to dynamically apply Windows OS Theme & Accent
-    def apply_os_theme(is_dark: bool, accent_color: str):
-        if not persona_manager.sync_with_os_theme:
-            return
-        logger.info(f"Applying OS Theme: Dark={is_dark}, Accent={accent_color}")
-        pal = get_palette_for_theme(is_dark=is_dark, accent_color=accent_color)
+    # Function to dynamically apply selected theme or OS Theme
+    def apply_active_theme(theme_id: Optional[str] = None):
+        t_id = theme_id or persona_manager.theme_palette.value
+        pal = get_palette_by_name(t_id)
+        logger.info(f"Applying Theme: {t_id} (Family: {pal.get('style_family')})")
         chat_window.central_widget.setStyleSheet(get_chat_window_qss(pal))
         settings_window.widget.setStyleSheet(get_settings_qss(pal))
         if hasattr(mascot, "bubble") and hasattr(mascot.bubble, "bubble_frame"):
             mascot.bubble.bubble_frame.setStyleSheet(get_speech_bubble_qss(pal))
-        mascot.set_persona_colors(pal["neon_cyan"], pal["neon_purple"])
+        mascot.set_persona_colors(pal.get("neon_cyan", "#38bdf8"), pal.get("neon_purple", "#818cf8"))
 
-    # Apply initial theme
+    def apply_os_theme(is_dark: bool, accent_color: str):
+        if not persona_manager.sync_with_os_theme:
+            apply_active_theme()
+            return
+        logger.info(f"Applying OS Theme: Dark={is_dark}, Accent={accent_color}")
+        os_theme_id = "bento_dark" if is_dark else "bento_light"
+        pal = get_palette_by_name(os_theme_id)
+        chat_window.central_widget.setStyleSheet(get_chat_window_qss(pal))
+        settings_window.widget.setStyleSheet(get_settings_qss(pal))
+        if hasattr(mascot, "bubble") and hasattr(mascot.bubble, "bubble_frame"):
+            mascot.bubble.bubble_frame.setStyleSheet(get_speech_bubble_qss(pal))
+        mascot.set_persona_colors(pal.get("neon_cyan", "#38bdf8"), pal.get("neon_purple", "#818cf8"))
+
+    # Apply initial theme (Defaulting to Bento Dark Minimal)
     if persona_manager.sync_with_os_theme:
         apply_os_theme(theme_detector.is_dark_mode(), theme_detector.get_accent_color())
     else:
-        initial_colors = persona_manager.get_accent_colors()
-        mascot.set_persona_colors(initial_colors["primary"], initial_colors["secondary"])
+        apply_active_theme()
 
     # Position mascot at bottom-right corner of screen
     screen = app.primaryScreen()
@@ -194,10 +205,26 @@ def main():
         if persona_manager.sync_with_os_theme:
             apply_os_theme(theme_detector.is_dark_mode(), theme_detector.get_accent_color())
         else:
-            colors = persona_manager.get_accent_colors()
-            mascot.set_persona_colors(colors["primary"], colors["secondary"])
+            apply_active_theme()
         agent_engine._init_client_and_chat()
         chat_window.title_label.setText(f"🤖 {persona_manager.name} | نِکسا")
+
+    def on_theme_switch_requested(theme_id: str):
+        persona_manager.update_companion_profile(
+            theme_palette=ThemePalette.from_string(theme_id),
+            sync_with_os_theme=False
+        )
+        apply_active_theme(theme_id)
+        theme_names = {
+            "bento_dark": "بنتو دارک مدرن (اسلیت و گرافیتی)",
+            "bento_light": "بنتو سرامیکی لوکس (استودیو سفید)",
+            "bento_espresso": "بنتو شکلاتی گرم (Warm Espresso)",
+            "oled_obsidian": "آبسیدین مینیمال (مشکی خالص OLED)",
+            "nordic_titanium": "نوردیک تیتانیوم (آبی و نقره‌ای)",
+            "cyber_cyan": "سایبرپانک نئون (کلاسیک فیروزه‌ای)"
+        }
+        friendly = theme_names.get(theme_id, theme_id)
+        chat_window.add_agent_message(f"✨ تم و استایل ظاهری برنامه تغییر یافت به: **{friendly}**")
 
     def on_wellness_alert(tip_message: str):
         mascot.say(tip_message, duration_ms=9000)
@@ -208,6 +235,7 @@ def main():
     settings_window.companion_updated.connect(on_companion_updated)
     settings_window.avatar_changed.connect(mascot.set_avatar_style)
     mascot.avatar_changed.connect(persona_manager.set_avatar_style)
+    mascot.theme_switch_requested.connect(on_theme_switch_requested)
     companion_monitor.wellness_reminder.connect(on_wellness_alert)
     theme_detector.theme_changed.connect(apply_os_theme)
 
@@ -228,15 +256,34 @@ def main():
         mascot.set_avatar_style(member.avatar_style)
         mascot.set_persona_colors(member.primary_color, member.secondary_color)
         chat_window.title_label.setText(f"🤖 {member.name} ({member.role_title}) | نِکسا")
+        chat_window.update_family_ui(member)
         if member.gender:
             tts_engine.gender = member.gender
 
     agent_engine.on_family_member_changed = on_family_member_switched
     settings_window.family_member_switched.connect(on_family_member_switched)
     settings_window.family_member_updated.connect(lambda m: agent_engine._init_client_and_chat())
+    mascot.family_member_switch_requested.connect(chat_window._on_family_chip_clicked)
 
     chat_window.mascot_state_signal.connect(mascot.set_state)
     chat_window.mascot_speech_signal.connect(mascot.say)
+
+    # Global synchronized mouth animation and acoustic interlock
+    def on_tts_started():
+        chat_window.mascot_state_signal.emit("speaking")
+
+    def on_tts_finished():
+        chat_window.mascot_state_signal.emit("idle")
+        if chat_window.hands_free_btn.isChecked():
+            chat_window.voice_listener.resume_listening()
+            chat_window.status_badge.setText("🟢 مکالمه پیوسته (صحبت کنید)")
+            chat_window.status_badge.setStyleSheet("color: #00f0ff; background-color: rgba(0, 240, 255, 0.15);")
+
+    tts_engine.on_speech_started = on_tts_started
+    tts_engine.on_speech_finished = on_tts_finished
+
+    # Enable Hands-Free Continuous Voice Mode by default on startup
+    chat_window.enable_hands_free_by_default()
 
     # 4. System Tray Icon
     app_icon_file = Path(__file__).parent / "assets" / "icon.png"

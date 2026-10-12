@@ -4,6 +4,8 @@ import json
 import time
 import logging
 import subprocess
+import threading
+import base64
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -25,6 +27,7 @@ class AppController:
     def __init__(self, workflows_path: Optional[Path] = None):
         self.workflows_path = workflows_path or WORKFLOWS_PATH
         self.workflows: Dict[str, Dict[str, Any]] = {}
+        self._lock = threading.Lock()
         self._load_workflows()
 
     def _load_workflows(self):
@@ -78,16 +81,29 @@ class AppController:
         self.save_workflows()
 
     def save_workflows(self) -> bool:
-        """Persists learned workflows to disk."""
-        try:
-            self.workflows_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.workflows_path, "w", encoding="utf-8") as f:
-                json.dump(self.workflows, f, ensure_ascii=False, indent=2)
-            logger.info("Saved application workflows successfully.")
-            return True
-        except Exception as exc:
-            logger.error(f"Failed to save app workflows: {exc}", exc_info=True)
-            return False
+        """Persists learned workflows to disk atomically."""
+        with self._lock:
+            try:
+                self.workflows_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_file = self.workflows_path.with_suffix(".tmp")
+                with open(temp_file, "w", encoding="utf-8") as f:
+                    json.dump(self.workflows, f, ensure_ascii=False, indent=2)
+                temp_file.replace(self.workflows_path)
+                logger.info("Saved application workflows successfully.")
+                return True
+            except Exception as exc:
+                logger.error(f"Failed to save app workflows: {exc}", exc_info=True)
+                return False
+
+    @staticmethod
+    def _encode_ps_str(value: str) -> str:
+        """
+        Safely encodes a Python string to a base64 expression decoded at runtime in PowerShell.
+        Completely prevents PowerShell code and string injection vulnerabilities.
+        """
+        val_str = str(value or "")
+        b64 = base64.b64encode(val_str.encode("utf-8")).decode("ascii")
+        return f"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{b64}'))"
 
     def _run_powershell(self, script: str) -> Dict[str, Any]:
         """Executes a PowerShell script via standard input with UTF-8 encoding."""
@@ -132,11 +148,12 @@ class AppController:
         """
         target = (window_title or app_name_or_title).lower()
         logger.info(f"Inspecting UI elements for app: {target}")
+        target_ps = self._encode_ps_str(target)
         ps_code = f"""
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 
-$target = "{target}".ToLower()
+$target = {target_ps}.ToLower()
 $root = [System.Windows.Automation.AutomationElement]::RootElement
 
 $foundWnd = $null
@@ -276,12 +293,14 @@ Write-Output $outJson
         target_app = window_title or app_name_or_title
         target_el = element_name or automation_id or element_name_or_id
         logger.info(f"Invoking element '{target_el}' in '{target_app}'")
+        target_app_ps = self._encode_ps_str(target_app)
+        target_el_ps = self._encode_ps_str(target_el)
         ps_code = f"""
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 
-$targetApp = "{target_app}".ToLower()
-$targetEl = "{target_el}".ToLower()
+$targetApp = {target_app_ps}.ToLower()
+$targetEl = {target_el_ps}.ToLower()
 
 $root = [System.Windows.Automation.AutomationElement]::RootElement
 $windows = $root.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
