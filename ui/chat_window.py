@@ -43,14 +43,32 @@ class AgentWorkerThread(QThread):
         self.audio_path = audio_path
 
     def run(self):
-        # Attach temporary callbacks for this run
-        self.engine.on_state_change = lambda s: self.state_changed.emit(s)
-        self.engine.on_status_update = lambda u: self.status_updated.emit(u)
-        self.engine.on_tool_call = lambda t, a, r: self.tool_executed.emit(t, a, r)
-        self.engine.on_quota_warning = lambda sev, msg: self.quota_warned.emit(sev, msg)
+        try:
+            # Attach temporary callbacks for this run
+            self.engine.on_state_change = lambda s: self.state_changed.emit(s)
+            self.engine.on_status_update = lambda u: self.status_updated.emit(u)
+            self.engine.on_tool_call = lambda t, a, r: self.tool_executed.emit(t, a, r)
+            self.engine.on_quota_warning = lambda sev, msg: self.quota_warned.emit(sev, msg)
 
-        reply = self.engine.process_user_message(self.message, self.image_path, self.audio_path)
-        self.response_ready.emit(reply)
+            reply = self.engine.process_user_message(self.message, self.image_path, self.audio_path)
+            self.response_ready.emit(reply)
+        except Exception as exc:
+            logger.error(f"Unhandled exception in AgentWorkerThread: {exc}", exc_info=True)
+            self.state_changed.emit("error")
+            self.status_updated.emit("خطا در پردازش!")
+            self.response_ready.emit(f"متاسفانه در پردازش درخواست خطای غیرمنتظره‌ای رخ داد: {str(exc)}")
+        finally:
+            # Clean up temporary utterance audio file if one was provided
+            if self.audio_path and os.path.exists(self.audio_path):
+                try:
+                    import tempfile
+                    from pathlib import Path
+                    resolved = str(Path(self.audio_path).resolve())
+                    if resolved.startswith(tempfile.gettempdir()):
+                        os.remove(self.audio_path)
+                        logger.debug(f"Cleaned up temporary audio utterance: {self.audio_path}")
+                except Exception as clean_exc:
+                    logger.warning(f"Could not remove temporary audio file {self.audio_path}: {clean_exc}")
 
 
 class ChatWindow(QWidget):
@@ -108,6 +126,7 @@ class ChatWindow(QWidget):
             self.setWindowIcon(QIcon(icon_path))
 
         self._setup_ui()
+        self.update_family_ui()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -129,9 +148,9 @@ class ChatWindow(QWidget):
         header_layout.setContentsMargins(12, 8, 12, 8)
 
         # Mascot Avatar Icon / Title
-        self.title_label = QLabel("🤖 سَهندیار | SahandYar AI", self.header_bar)
+        self.title_label = QLabel("✨ نِکسا | NexA AI", self.header_bar)
         self.title_label.setObjectName("TitleLabel")
-        self.title_label.setToolTip("سَهندیار | طراحی و توسعه: شرکت راهکار الکترونیک سهند (https://irres.ir)")
+        self.title_label.setToolTip("نِکسا (NexA) | طراحی و توسعه: شرکت راهکار الکترونیک سهند (https://irres.ir)")
         header_layout.addWidget(self.title_label)
 
         # Status badge
@@ -164,6 +183,54 @@ class ChatWindow(QWidget):
         header_layout.addWidget(self.close_btn)
 
         content_layout.addWidget(self.header_bar)
+
+        # 1.5. NexA Family Members Quick Bar & Status
+        self.family_bar = QFrame(self.central_widget)
+        self.family_bar.setObjectName("FamilyBar")
+        family_main_layout = QVBoxLayout(self.family_bar)
+        family_main_layout.setContentsMargins(8, 6, 8, 6)
+        family_main_layout.setSpacing(5)
+
+        # Top row: Active Member info & level
+        family_top_row = QHBoxLayout()
+        family_top_row.setContentsMargins(2, 0, 2, 0)
+        self.active_family_badge = QLabel("👥 هویت فعال: در حال بارگذاری...", self.family_bar)
+        self.active_family_badge.setObjectName("ActiveFamilyBadge")
+        family_top_row.addWidget(self.active_family_badge)
+
+        family_top_row.addStretch()
+
+        self.active_family_level = QLabel("سطح ۱ (۱۰۰ XP)", self.family_bar)
+        self.active_family_level.setObjectName("ActiveFamilyLevel")
+        family_top_row.addWidget(self.active_family_level)
+        family_main_layout.addLayout(family_top_row)
+
+        # Bottom row: Chips for all 6 members
+        self.family_chips_layout = QHBoxLayout()
+        self.family_chips_layout.setSpacing(4)
+        self.family_chips_layout.setContentsMargins(0, 0, 0, 0)
+        self.family_buttons = {}
+
+        family_members_meta = [
+            ("nexamehr", "🛡️ نِکسامِهر", "پدر خانواده | معمار ارشد سیستم، پاورشل، امنیت و سخت‌افزار"),
+            ("nexanoo", "🌸 نِکسانو", "مادر خانواده | مدیر هماهنگی، هوش هیجانی و مراقبت سلامت"),
+            ("samyar", "💻 سامیار", "پسر ارشد | مهندس نرم‌افزار، کدنویسی، پایتون و تست خودکار"),
+            ("artin", "⚡ آرتین", "پسر دوم | خودکارسازی ویندوز، کلیدهای میانبر و کنترل نرم‌افزارها"),
+            ("nila", "🔍 نیلا", "دختر سوم | جستجوگر وب، تحقیق عمیق، مقایسه قیمت‌ها و تحلیل داده"),
+            ("tara", "🎨 تارا", "دختر چهارم | طراحی خلاق، سناریوهای بصری و تحلیل تصویر")
+        ]
+
+        for m_id, m_label, m_tip in family_members_meta:
+            btn = QPushButton(m_label, self.family_bar)
+            btn.setProperty("class", "family_chip")
+            btn.setToolTip(m_tip)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda checked, mid=m_id: self._on_family_chip_clicked(mid))
+            self.family_chips_layout.addWidget(btn)
+            self.family_buttons[m_id] = btn
+
+        family_main_layout.addLayout(self.family_chips_layout)
+        content_layout.addWidget(self.family_bar)
 
         # 2. Quick Action Chips
         chips_layout = QHBoxLayout()
@@ -358,6 +425,19 @@ class ChatWindow(QWidget):
             self.status_badge.setStyleSheet("")
             self.mascot_speech_signal.emit("مکالمه پیوسته متوقف شد.")
 
+    def enable_hands_free_by_default(self):
+        """Activates continuous voice listening on startup so user can talk immediately."""
+        self.hands_free_btn.setChecked(True)
+        started = self.voice_listener.start()
+        if started:
+            self.hands_free_btn.setStyleSheet("background-color: rgba(0, 240, 255, 0.3); border: 1.5px solid #00f0ff;")
+            self.status_badge.setText("🟢 مکالمه پیوسته (صحبت کنید)")
+            self.status_badge.setStyleSheet("color: #00f0ff; background-color: rgba(0, 240, 255, 0.15);")
+            logger.info("Continuous Voice Listener enabled by default on startup.")
+        else:
+            self.hands_free_btn.setChecked(False)
+            logger.warning("Continuous Voice Listener could not be started on startup.")
+
     def _on_hands_free_speech_started(self):
         if not self.hands_free_btn.isChecked():
             return
@@ -404,7 +484,9 @@ class ChatWindow(QWidget):
                 self.status_badge.setText("🎤 در حال گوش دادن به شما...")
                 self.status_badge.setStyleSheet("color: #ff4d6d; background-color: rgba(255, 77, 109, 0.15);")
                 self.mascot_state_signal.emit("thinking")
-                self.mascot_speech_signal.emit("دارم با دقت گوش میدم...")
+                import random
+                listen_phrases = ["سراپا گوشم...", "می‌شنوم، بفرمایید...", "دارم با دقت گوش میدم...", "گوشم با شماست..."]
+                self.mascot_speech_signal.emit(random.choice(listen_phrases))
 
     def _on_audio_stopped(self, audio_path: str):
         if audio_path and os.path.exists(audio_path) and not self.worker:
@@ -422,6 +504,65 @@ class ChatWindow(QWidget):
         self.current_attached_image = None
         self.current_attached_audio = None
         self.attachment_bar.hide()
+
+    def update_family_ui(self, member=None):
+        """Updates the Family Bar UI with the currently active member and XP."""
+        fm = getattr(self.engine, "family_manager", None)
+        if not fm:
+            return
+        active = member or fm.get_active_member()
+        if not active:
+            return
+
+        if hasattr(self, "active_family_badge"):
+            self.active_family_badge.setText(f"👥 {active.name} | {active.role_title}")
+        if hasattr(self, "active_family_level"):
+            self.active_family_level.setText(f"سطح {active.level} ({active.xp} XP)")
+
+        for m_id, btn in getattr(self, "family_buttons", {}).items():
+            if m_id == active.id:
+                btn.setProperty("class", "family_chip_active")
+            else:
+                btn.setProperty("class", "family_chip")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+    def _on_family_chip_clicked(self, member_id: str):
+        """Switches the active persona to the selected family member."""
+        fm = getattr(self.engine, "family_manager", None)
+        if not fm:
+            return
+        member = fm.switch_member(member_id)
+        if not member:
+            return
+
+        # Re-initialize engine prompt with new identity
+        self.engine._init_client_and_chat()
+        self.update_family_ui(member)
+        self.title_label.setText(f"🤖 {member.name} ({member.role_title}) | نِکسا")
+
+        # Notify engine listener if connected (e.g. Mascot updates avatar & colors)
+        if getattr(self.engine, "on_family_member_changed", None):
+            self.engine.on_family_member_changed(member)
+
+        # Notify user in speech and mascot
+        import random
+        greetings = [
+            f"سلام! من {member.name} هستم، {member.role_title}. در خدمت شما هستم!",
+            f"هویت فعال شد: من {member.name} هستم ({member.role_title}). بفرمایید در چه کاری کمکتان کنم؟",
+            f"سلام! {member.name} آنلاین شد. در خدمت شما هستم!"
+        ]
+        greet = random.choice(greetings)
+        self.mascot_speech_signal.emit(greet)
+        if self.tts.enabled:
+            if member.gender:
+                self.tts.gender = member.gender
+            self.tts.speak(greet)
+
+        self.add_agent_message(
+            f"✨ هویت فعال تغییر یافت به **{member.name}** ({member.role_title} - سطح {member.level})\n"
+            f"💡 تخصص‌ها: {', '.join(member.specialties[:3])}"
+        )
 
     def _on_chip_clicked(self, prompt: str):
         if prompt == "__SCREENSHOT__":
@@ -492,7 +633,7 @@ class ChatWindow(QWidget):
     def add_alert_card(self, severity: str, message: str):
         card = QFrame()
         is_critical = (severity == "critical")
-        border_color = PALETTE["neon_red"] if is_critical else PALETTE["neon_amber"]
+        border_color = PALETTE.get("neon_red", "#ef4444") if is_critical else PALETTE.get("neon_amber", "#f59e0b")
         bg_color = "rgba(255, 77, 109, 0.15)" if is_critical else "rgba(255, 183, 3, 0.15)"
         card.setStyleSheet(f"background-color: {bg_color}; border: 1.5px solid {border_color}; border-radius: 12px; padding: 10px;")
 

@@ -1,4 +1,5 @@
 import sys
+import logging
 from typing import Any
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QFrame, QGraphicsOpacityEffect
@@ -7,6 +8,8 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QFont
 
 from ui.styles import SPEECH_BUBBLE_QSS
+
+logger = logging.getLogger("NexA.SpeechBubble")
 
 
 class SpeechBubble(QWidget):
@@ -126,6 +129,6 @@ class SpeechBubble(QWidget):
     def _on_fade_out_finished(self):
         try:
             self.opacity_anim.finished.disconnect(self._on_fade_out_finished)
-        except Exception:
-            pass
+        except (TypeError, RuntimeError) as disc_err:
+            logger.debug(f"Opacity animation finished signal already disconnected: {disc_err}")
         self.hide()
