@@ -180,7 +180,8 @@ class MultiAiCollaborator:
         prompt: str,
         provider: Optional[str] = None,
         model: Optional[str] = None,
-        system_role: Optional[str] = None
+        system_role: Optional[str] = None,
+        system_instruction: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Queries an external peer AI provider and returns the structured response.
@@ -193,21 +194,21 @@ class MultiAiCollaborator:
 
         logger.info(f"Consulting Peer AI [{prov_key}] (model: {target_model})...")
 
-        system_instruction = system_role or (
+        effective_system_instruction = system_instruction or system_role or (
             "You are an expert peer AI assistant reviewing logic, software architecture, and facts. "
             "Provide objective, rigorous, and constructive analysis."
         )
 
         try:
             if prov_key == PeerProvider.CLAUDE.value:
-                return self._call_claude_api(base_url, api_key, target_model, prompt, system_instruction)
+                return self._call_claude_api(base_url, api_key, target_model, prompt, effective_system_instruction)
             elif prov_key == PeerProvider.OLLAMA.value:
-                return self._call_ollama_api(base_url, target_model, prompt, system_instruction)
+                return self._call_ollama_api(base_url, target_model, prompt, effective_system_instruction)
             elif prov_key == PeerProvider.GEMINI_PEER.value:
-                return self._call_gemini_peer(api_key, target_model, prompt, system_instruction)
+                return self._call_gemini_peer(api_key, target_model, prompt, effective_system_instruction)
             else:
                 # Default to OpenAI compatible format (OpenAI, DeepSeek, OpenRouter, Groq)
-                return self._call_openai_compatible(base_url, api_key, target_model, prompt, system_instruction, prov_key)
+                return self._call_openai_compatible(base_url, api_key, target_model, prompt, effective_system_instruction, prov_key)
         except Exception as exc:
             logger.error(f"Error querying peer AI provider '{prov_key}': {exc}", exc_info=True)
             return {

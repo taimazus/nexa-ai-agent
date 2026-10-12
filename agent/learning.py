@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import threading
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -20,6 +21,7 @@ class LearningEngine:
     def __init__(self, storage_path: Optional[str] = None):
         self.storage_path = Path(storage_path) if storage_path else DEFAULT_LEARNINGS_PATH
         self.learnings: List[Dict[str, Any]] = []
+        self._lock = threading.Lock()
         self._load()
 
     def _load(self):
@@ -35,17 +37,20 @@ class LearningEngine:
             self.learnings = []
 
     def _save(self):
-        try:
-            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {
-                "rules": self.learnings,
-                "count": len(self.learnings),
-                "last_updated": time.time()
-            }
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            logger.error(f"Error saving learnings to {self.storage_path}: {exc}", exc_info=True)
+        with self._lock:
+            try:
+                self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+                payload = {
+                    "rules": self.learnings,
+                    "count": len(self.learnings),
+                    "last_updated": time.time()
+                }
+                temp_file = self.storage_path.with_suffix(".tmp")
+                with open(temp_file, "w", encoding="utf-8") as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+                temp_file.replace(self.storage_path)
+            except Exception as exc:
+                logger.error(f"Error saving learnings to {self.storage_path}: {exc}", exc_info=True)
 
     def record_learning(self, trigger: str, corrective_rule: str, category: str = "general") -> Dict[str, Any]:
         """

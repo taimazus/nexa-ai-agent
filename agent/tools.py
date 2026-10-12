@@ -166,6 +166,30 @@ def file_operations(action: str, path: str, content: Optional[str] = None) -> Di
         elif action == "delete":
             if not target_path.exists():
                 return {"success": False, "error": f"Path not found: {target_path}"}
+
+            # Safety Guard: Prevent catastrophic deletion of system root, drives, or user home directory
+            resolved_str = str(target_path).lower().rstrip("\\/")
+            system_drive = os.environ.get("SystemDrive", "C:").lower().rstrip("\\/")
+            win_dir = os.environ.get("WINDIR", "C:\\Windows").lower().rstrip("\\/")
+            prog_files = os.environ.get("ProgramFiles", "C:\\Program Files").lower().rstrip("\\/")
+            user_home = str(Path.home()).lower().rstrip("\\/")
+
+            protected_paths = {
+                system_drive,
+                f"{system_drive}\\",
+                win_dir,
+                f"{win_dir}\\system32",
+                prog_files,
+                user_home
+            }
+
+            if resolved_str in protected_paths or len(target_path.parts) <= 1 or target_path == target_path.anchor:
+                logger.warning(f"Prevented dangerous deletion of protected path: {target_path}")
+                return {
+                    "success": False,
+                    "error": f"عملیات حذف روی مسیرهای حساس یا ریشه سیستم‌عامل مسدود شده است: {target_path}"
+                }
+
             if target_path.is_file():
                 target_path.unlink()
             else:
@@ -202,8 +226,8 @@ def system_diagnostics() -> Dict[str, Any]:
                 try:
                     total_mb = int(lines[0].strip()) // 1024
                     free_mb = int(lines[1].strip()) // 1024
-                except ValueError:
-                    pass
+                except ValueError as val_err:
+                    logger.warning(f"Could not parse memory numbers from PowerShell output: {val_err}")
                     
         return {
             "success": True,
@@ -329,18 +353,18 @@ def capture_webcam(camera_index: int = 0, save_path: Optional[str] = None) -> Di
             logger.error(f"Cannot open webcam device index {camera_index}")
             return {"success": False, "error": f"Webcam device index {camera_index} is not available or disconnected."}
 
-        # Warm-up read
-        ret, frame = cap.read()
-        if not ret or frame is None:
+        try:
+            # Warm-up read
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                return {"success": False, "error": "Failed to read initial frame from webcam."}
+
+            # Actual frame read
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                return {"success": False, "error": "Empty frame captured from webcam."}
+        finally:
             cap.release()
-            return {"success": False, "error": "Failed to read initial frame from webcam."}
-
-        # Actual frame read
-        ret, frame = cap.read()
-        cap.release()
-
-        if not ret or frame is None:
-            return {"success": False, "error": "Empty frame captured from webcam."}
 
         if not save_path:
             temp_dir = tempfile.gettempdir()
@@ -423,14 +447,14 @@ def list_installed_apps(query: Optional[str] = None) -> Dict[str, Any]:
                                 version = ""
                                 try:
                                     version, _ = winreg.QueryValueEx(subkey, "DisplayVersion")
-                                except OSError:
-                                    pass
+                                except OSError as oe:
+                                    logger.debug(f"Optional DisplayVersion not present: {oe}")
 
                                 install_loc = ""
                                 try:
                                     install_loc, _ = winreg.QueryValueEx(subkey, "InstallLocation")
-                                except OSError:
-                                    pass
+                                except OSError as oe:
+                                    logger.debug(f"Optional InstallLocation not present: {oe}")
 
                                 results.append({
                                     "name": clean_name,

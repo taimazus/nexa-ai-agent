@@ -27,6 +27,7 @@ class FamilyMember:
         self.bio: str = data.get("bio", "")
         self.skills: List[str] = data.get("skills", [])
         self.custom_skills: Dict[str, Dict[str, Any]] = data.get("custom_skills", {})
+        self.memories: Dict[str, Any] = data.get("memories", {})
         self.xp: int = data.get("xp", 100)
         self.level: int = data.get("level", 1)
 
@@ -47,6 +48,7 @@ class FamilyMember:
             "bio": self.bio,
             "skills": self.skills,
             "custom_skills": self.custom_skills,
+            "memories": self.memories,
             "xp": self.xp,
             "level": self.level
         }
@@ -126,6 +128,24 @@ class FamilyMember:
         logger.info(f"Learned new skill '{clean_name}' for member {self.name} ({self.id}).")
         return {"success": True, "member": self.name, "skill": clean_name, "level": self.level}
 
+    def remember_fact(self, key: str, value: Any) -> Dict[str, Any]:
+        """Stores a persistent memory fact for this family member."""
+        k = key.strip()
+        self.memories[k] = value
+        self.gain_xp(10)
+        logger.info(f"Member '{self.name}' ({self.id}) recorded memory: {k}")
+        return {"success": True, "member": self.name, "key": k, "value": value}
+
+    def recall_facts(self, query: str = "") -> Dict[str, Any]:
+        """Returns relevant memories or all memories if query is empty."""
+        if not query or not query.strip():
+            return self.memories
+        q = query.strip().lower()
+        return {
+            k: v for k, v in self.memories.items()
+            if q in k.lower() or q in str(v).lower()
+        }
+
     def get_prompt_context(self) -> str:
         """Generates the role-specific prompt injection for the agent engine."""
         specialties_txt = "\n".join([f"- {s}" for s in self.specialties])
@@ -133,6 +153,12 @@ class FamilyMember:
         if self.custom_skills:
             custom_skills_txt = "\nمهارت‌های تخصصی جدیدی که آموخته‌اید:\n" + "\n".join(
                 [f"• {k}: {v.get('steps')}" for k, v in self.custom_skills.items()]
+            )
+
+        memories_txt = ""
+        if self.memories:
+            memories_txt = "\nخاطرات، دانسته‌ها و یادداشت‌های شخصی شما از کاربر و تجربیات گذشته:\n" + "\n".join(
+                [f"• {k}: {v}" for k, v in self.memories.items()]
             )
 
         mood_map = {
@@ -149,14 +175,14 @@ class FamilyMember:
         }
         mood_desc = mood_map.get(self.mood, f"دارای روحیات و حس و حال {self.mood}")
         gender_desc = "آقا" if self.gender == "male" else "خانم"
-        gender_desc = "آقا" if self.gender == "male" else "خانم"
 
         return (
-            f"هویت فعال شما در خانواده هوشمند نِکسا: «{self.name}» ({gender_desc} - {self.role_title} - سطح {self.level})\n"
+            f"هویت فعال شما در خانواده هوشمند نِکسا: «{self.name}» ({gender_desc} - {self.role_title} - سطح {self.level} با {self.xp} امتیاز تجربه)\n"
             f"حس و حال و روحیات رفتاری (Mood): {mood_desc}\n"
             f"شخصیت و بیوگرافی:\n{self.bio}\n\n"
             f"تخصص‌های ویژه شما:\n{specialties_txt}\n"
             f"{custom_skills_txt}\n"
+            f"{memories_txt}\n"
             f"قوانین هویتی:\n"
             f"۱. با افتخار فرزند یا عضو خانواده نِکسا و نماینده شرکت «راهکار الکترونیک سهند» (https://irres.ir) هستید.\n"
             f"۲. لحن صحبت شما دقیقاً متناسب با نقشتان ({self.role_title}) و روحیاتتان ({mood_desc}) و صمیمی، پویا و روان به زبان فارسی است.\n"

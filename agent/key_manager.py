@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import threading
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -21,6 +22,7 @@ class KeyManager:
         self.config_path = Path(config_path) if config_path else DEFAULT_SETTINGS_PATH
         self.keys: List[Dict[str, Any]] = []
         self.active_index: int = 0
+        self._lock = threading.Lock()
         self._load()
 
         # Only seed from environment if using default app path or explicit default_key
@@ -33,7 +35,11 @@ class KeyManager:
             if self.config_path.exists():
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    self.keys = data.get("api_keys", [])
+                    raw_keys = data.get("api_keys", [])
+                    if self.config_path == DEFAULT_SETTINGS_PATH:
+                        self.keys = [k for k in raw_keys if not k.get("key", "").upper().startswith("TEST_")]
+                    else:
+                        self.keys = raw_keys
                     self.active_index = data.get("active_index", 0)
                     if self.active_index >= len(self.keys):
                         self.active_index = 0
@@ -46,17 +52,20 @@ class KeyManager:
             self.active_index = 0
 
     def _save(self):
-        try:
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            data = {
-                "api_keys": self.keys,
-                "active_index": self.active_index,
-                "updated_at": time.time()
-            }
-            with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            logger.error(f"Error saving settings to {self.config_path}: {exc}", exc_info=True)
+        with self._lock:
+            try:
+                self.config_path.parent.mkdir(parents=True, exist_ok=True)
+                data = {
+                    "api_keys": self.keys,
+                    "active_index": self.active_index,
+                    "updated_at": time.time()
+                }
+                temp_file = self.config_path.with_suffix(".tmp")
+                with open(temp_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                temp_file.replace(self.config_path)
+            except Exception as exc:
+                logger.error(f"Error saving settings to {self.config_path}: {exc}", exc_info=True)
 
     def get_keys(self) -> List[Dict[str, Any]]:
         return list(self.keys)
