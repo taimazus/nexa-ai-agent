@@ -4,111 +4,179 @@
 
 **English Version** | [نسخه فارسی](Architecture.fa.md)
 
-This technical specification details the modular architecture, lifecycle workflows, threading model, and data interactions uniting PyQt6, Google Gemini 2.5 Flash, and the Windows OS execution layer in Nova Desktop AI Agent.
+This document describes the modular architecture, execution lifecycles, multi-agent family ecosystem, continuous hands-free voice activity detection (VAD), and desktop application automation of **NexA AI (نِکسا)**, engineered by **Rahkar Electronic Sahand** ([https://irres.ir](https://irres.ir)).
 
 ---
 
 ## 1. High-Level Layered Architecture
 
-The system is decomposed into four discrete, decoupled tiers:
+The system is separated into 5 decoupled architectural tiers:
 
 ```mermaid
 graph TD
-    subgraph UI_Layer [User Interface Tier - PyQt6]
-        Mascot[DesktopMascot - Frameless 3D Desktop Pet]
-        Bubble[SpeechBubble - Floating Context Speech Bubble]
-        Chat[ChatWindow - Glassmorphic Cyber Command Center]
-        Settings[SettingsWindow - Settings Dialog]
-        Tray[SystemTray - Windows Tray Icon]
+    subgraph UI_Layer [UI Presentation Layer - PyQt6]
+        Mascot[DesktopMascot - 3D Expressive Pet with Volumetric Lip-Sync]
+        Bubble[SpeechBubble - Floating Dialogue Card]
+        Chat[ChatWindow - Glassmorphic Cyberpunk Command Center]
+        Settings[SettingsWindow - 6-Tab Configuration Studio]
+        Tray[SystemTray - Background Windows Tray Monitor]
     end
 
-    subgraph Coordination_Layer [Coordination & Background Threading]
-        Worker[AgentWorkerThread - QThread Executor]
-        VoiceRec[AudioRecorder - Wave Microphone Streamer]
-        TTS[TTSEngine - Native Windows SAPI Synthesizer]
+    subgraph Audio_Voice_Layer [Audio & Conversational VAD Tier]
+        VAD[ContinuousVoiceListener - Real-time VAD & Wake-Word Detector]
+        AudioRec[AudioRecorder - Manual Wave Recorder]
+        TTS[TTSEngine - Gemini Neural Speech & SAPI Fallback]
     end
 
-    subgraph Core_Agent_Layer [AI Agent & Reasoning Tier]
-        Engine[AgentEngine - Gemini Client & Chat Orchestrator]
-        KeyMgr[KeyManager - Key Pool & Zero-Loss Rotation]
-        MemMgr[MemoryManager - Persistent Long-Term Memory]
-        LearnEng[LearningEngine - Failure Reflection Engine]
-        PersonaMgr[PersonaManager - Gender, Tone & Theme Store]
+    subgraph Family_Ecosystem_Layer [Multi-Agent Family Ecosystem]
+        FamMgr[FamilyManager - Task Router & Skill Inheritance Director]
+        Artin[Artin - Windows UI & Macro Automation Specialist]
+        Nila[Nila - Email & Public Relations Assistant]
+        Tara[Tara - Visual Designer & Reels Strategist]
+        SamYar[SamYar - Senior Software & QA Engineer]
+        Parents[NexaMehr & NexaNoo - Architecture & Caregivers]
     end
 
-    subgraph System_Tools_Layer [OS Tool Execution Tier]
-        Tools[PowerShell / Python / Files / Webcam / Vision / Diagnostics]
-        OS[(Windows 10/11 & Hardware)]
+    subgraph Core_Agent_Layer [Core AI & Cognitive Engine]
+        Engine[AgentEngine - Gemini Session & Tools Dispatcher]
+        KeyMgr[KeyManager - API Key Pool with Zero-Loss Failover]
+        MemMgr[MemoryManager - Long-term Knowledge Base]
+        LearnEng[LearningEngine - Autonomous Self-Learning Loop]
+        MultiAI[MultiAiCollaborator - Peer Review & Offline LLMs]
+        CfgMgr[ServicesConfigManager - Persistent System Configuration]
     end
 
-    Chat --> Worker
-    Worker --> Engine
+    subgraph Automation_Integrations_Layer [Automation & System Layer]
+        AppCtrl[AppController - Native Windows UI Automation & Macros]
+        EmailSvc[EmailService - Secure IMAP/SMTP Client]
+        SocialMgr[SocialMediaManager - Reels Studio & Instagram Browser Hooks]
+        OSTools[PowerShell / Python / Files / Webcam / Vision / Diagnostics]
+        WinOS[(Windows 10/11 & Hardware)]
+    end
+
+    Chat --> VAD
+    VAD --> Chat
+    Chat --> Engine
+    Engine --> FamMgr
+    FamMgr --> Artin
+    FamMgr --> Nila
+    FamMgr --> Tara
+    FamMgr --> SamYar
+    FamMgr --> Parents
+    Artin --> AppCtrl
+    Nila --> EmailSvc
+    Tara --> SocialMgr
     Engine --> KeyMgr
     Engine --> MemMgr
     Engine --> LearnEng
-    Engine --> PersonaMgr
-    Engine --> Tools
-    Tools --> OS
-    Worker --> Mascot
-    Worker --> Bubble
-    Worker --> TTS
-    VoiceRec --> Chat
+    Engine --> MultiAI
+    Engine --> CfgMgr
+    Engine --> OSTools
+    AppCtrl --> WinOS
+    EmailSvc --> WinOS
+    SocialMgr --> WinOS
+    OSTools --> WinOS
+    Engine --> Mascot
+    Engine --> Bubble
+    Engine --> TTS
+    TTS --> Mascot
 ```
 
 ---
 
-## 2. Request Lifecycle & Tool Execution Sequence
+## 2. Hands-Free Conversational Lifecycle (VAD & Acoustic Interlock)
 
-When a user submits a prompt, voice recording, or webcam snapshot, execution flows asynchronously through the pipeline:
+Natural human-to-human hands-free voice loop without requiring mouse clicks:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as User
-    participant Chat as Chat Window (UI)
-    participant Worker as Background Worker (QThread)
-    participant Mascot as Desktop Mascot
-    participant Engine as Agent Engine
-    participant Gemini as Google Gemini 2.5 API
-    participant Tools as OS Tools
-    participant TTS as Windows SAPI TTS
+    participant Mic as Microphone (Conexant ISST)
+    participant VAD as Voice Detector (ContinuousVoiceListener)
+    participant Chat as Chat Window (ChatWindow)
+    participant Engine as AI Engine (AgentEngine)
+    participant TTS as Neural Speech (TTSEngine)
+    participant Mascot as 3D Mascot (DesktopMascot)
 
-    User->>Chat: Text command / Mic audio / Webcam frame
-    Chat->>Mascot: Set State -> "Thinking" (Purple scanner)
-    Chat->>Worker: Dispatch asynchronously (Non-blocking GUI)
-    Worker->>Engine: Send message + multimodal payloads
-    Engine->>Gemini: Call chat.send_message() with tool declarations
+    User->>Mic: Speaks utterance ("NexA, check my latest emails")
+    Mic->>VAD: Streams 16-bit 16kHz PCM audio buffers
+    Note over VAD: RMS energy exceeds threshold + prepends 300ms ring buffer
+    VAD->>Chat: Emits speech_started signal
+    Chat->>Mascot: Sets state to Thinking (listening posture)
     
-    opt Multi-turn Autonomous Tool Execution
-        Gemini-->>Engine: Tool call request (e.g. execute_powershell or capture_webcam)
-        Engine->>Mascot: Set State -> "Working" (Orange data streams)
-        Engine->>Tools: Execute with strict UTF-8 & timeout safety
-        Tools-->>Engine: Structured output (stdout, stderr, exit code)
-        Engine->>Gemini: Forward tool response back to Gemini session
-    end
-
-    Gemini-->>Engine: Final structured natural language response
-    Engine-->>Worker: Return response text
-    Worker->>Mascot: Set State -> "Speaking" / "Success"
-    Worker->>Chat: Render Markdown message card
-    Worker->>TTS: Speak response through speakers
-    TTS-->>User: Audio playback (matching active persona gender)
+    User->>Mic: Finishes sentence and pauses (~0.9s silence)
+    Note over VAD: Silence duration exceeds timeout threshold
+    VAD->>VAD: Packages accumulated PCM into Wave file
+    VAD->>Chat: Emits speech_completed(wav_path)
+    
+    Note over VAD,Chat: Acoustic Interlock: Listening pauses so NexA never hears itself
+    Chat->>Engine: Dispatches audio to Gemini 2.5 Flash
+    Engine->>Engine: Transcribes, determines intent, routes to Nila
+    Engine->>Chat: Generates conversational response
+    Chat->>TTS: Synthesizes fluent speech
+    TTS->>Mascot: Drives lip-sync mouth opening & eye gestures
+    TTS-->>User: Plays audio through speaker
+    
+    Note over TTS,VAD: Speech finishes -> Voice listener automatically re-engages
+    Chat->>VAD: Calls resume_listening()
+    Note over VAD: Ready to hear user's next response hands-free!
 ```
 
 ---
 
-## 3. Module Breakdown & Responsibility Matrix
+## 3. Universal Desktop App Automation & Macro Execution Flow
 
-- **`main.py`**: Application bootstrap, signal-slot choreography, window positioning, system tray setup.
-- **`agent/engine.py`**: Gemini chat session management, prompt composition, failover retries, and tool routing.
-- **`agent/tools.py`**: Isolated execution environments for PowerShell, Python subprocesses, filesystem I/O, OpenCV webcam capture, desktop screenshots, and system hardware telemetry.
-- **`agent/key_manager.py`**: Thread-safe API key pool, persistent health state, automatic rotation upon quota exhaustion.
-- **`agent/memory.py`**: Long-term persistent key-value memory store (`data/memory.json`), semantic queries, system prompt injection.
-- **`agent/learning.py`**: Automated failure reflection, corrective rule formulation, and gold-rule injection (`data/learnings.json`).
-- **`agent/audio_recorder.py`**: Uncompressed Wave audio recording from the default Windows microphone device.
-- **`agent/tts.py`**: SAPI speech synthesis with non-blocking async speech and dynamic voice matching (David/Zira).
-- **`ui/mascot.py`**: Volumetric 3D vector rendering without raster image assets, supporting 4 avatars, physics float, and reactive emotional visors.
-- **`ui/chat_window.py`**: Glassmorphic UI with quick action chips, multimedia attachment bar, markdown code cards, and alert banners.
-- **`ui/settings_window.py`**: Tabbed dialog for keys pool, memory inspection, learning engine records, voice testing, and 3D avatar selection.
+How NexA connects to Windows software controls and executes learned macros:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant Chat as Chat Window
+    participant Engine as NexA Engine
+    participant Artin as Artin (Family Member)
+    participant AppCtrl as App Controller (AppController)
+    participant WinUIA as Windows (UIAutomationClient)
+    participant TargetApp as Target Software (Notepad, Excel, etc.)
+
+    User->>Chat: "Open Notepad and type my meeting notes"
+    Chat->>Engine: Forwards user intent
+    Engine->>Artin: Delegates task to Artin (Desktop Automation specialist)
+    Artin->>AppCtrl: Calls execute_workflow(notepad_quick_note)
+    
+    alt UI Inspection Needed
+        AppCtrl->>WinUIA: Calls inspect_app_ui(Notepad)
+        WinUIA-->>AppCtrl: Returns element tree (Buttons, Menus, Edit fields, bounds)
+    end
+
+    AppCtrl->>TargetApp: Step 1: Launch/Focus application (launch)
+    AppCtrl->>TargetApp: Step 2: Send keystrokes & type substituted text (type)
+    AppCtrl->>TargetApp: Step 3: Send shortcut key Ctrl+S (hotkey)
+    TargetApp-->>AppCtrl: Operation completed
+    AppCtrl-->>Engine: Reports success across 3 executed steps
+    Engine-->>Chat: Speaks and presents completion summary to User
+```
+
+---
+
+## 4. Module Responsibility Matrix
+
+- **`main.py`**: Application bootstrap, signal routing, Windows dark/light mode detector, and accent color synchronization.
+- **`agent/engine.py`**: Central coordinator, system prompt composition, key rotation management, and tool dispatcher.
+- **`agent/voice_detector.py`**: Real-time continuous voice activity detection, dynamic noise tracking, silence timeout, and acoustic interlock.
+- **`agent/family/manager.py`**: Family ecosystem director, prompt delegator, XP and level progression manager.
+- **`agent/family/app_controller.py`**: Windows UI Automation client, control inspector, and macro workflow learner/executor.
+- **`agent/integrations/email_client.py`**: Secure IMAP4 SSL / SMTP email client with priority categorization and auditory readout.
+- **`agent/integrations/social_manager.py`**: Instagram viral Reels planner, caption and hashtag creator, and browser session launcher.
+- **`agent/integrations/config_manager.py`**: Auto-detects host system defaults and persistently saves configurations in `data/integrations_config.json`.
+- **`agent/key_manager.py`**: Gemini API key pool manager with zero-loss HTTP 429 failover.
+- **`agent/memory.py`**: Persistent long-term memory store across restarts.
+- **`agent/learning.py`**: Autonomous failure reflection engine synthesizing permanent corrective rules.
+- **`agent/multi_ai.py`**: Peer AI collaborator interfacing with cloud LLMs (GPT-4o, Claude) and offline models (Ollama, LM Studio).
+- **`agent/tts.py`**: Gemini Neural Speech synthesizer with offline Windows SAPI fallback.
+- **`ui/mascot.py`**: Procedural vector renderer for 8 distinct 3D avatars, dynamic gaze tracking, and lip-sync.
+- **`ui/chat_window.py`**: Cyberpunk glassmorphic chat interface with hands-free conversation button `🗣️`.
+- **`ui/settings_window.py`**: 6-tab unified control center (Persona & Family, API Keys, Memory, Learning, Companion, Multi-AI).
 
 </div>

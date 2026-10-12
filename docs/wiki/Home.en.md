@@ -1,33 +1,36 @@
 <div lang="en" dir="ltr" align="left">
 
-# NexA Desktop AI Agent Knowledge Base & Wiki (نِکسا) 🤖📚
+# NexA AI Knowledge Base & Documentation Wiki 🤖📚
 
-> **🏢 Designed & Developed by:** Rahkar Electronic Sahand &nbsp;|&nbsp; 🌐 Official Website: [https://irres.ir](https://irres.ir)
+> **🏢 Designer & Developer:** Rahkar Electronic Sahand &nbsp;|&nbsp; 🌐 Official Website: [https://irres.ir](https://irres.ir)
 
-**English Version** | [نسخه فارسی](Home.fa.md)
+[نسخه فارسی](Home.fa.md) | **English Version**
 
-Welcome to the comprehensive knowledge base and technical wiki for **NexA Desktop AI Agent (نِکسا)**, a next-generation autonomous, voice-enabled, multimodal AI companion for Windows designed and built by **Rahkar Electronic Sahand** ([https://irres.ir](https://irres.ir)), powered by Google Gemini 2.5 Flash and PyQt6.
+Welcome to the comprehensive knowledge base and documentation for the **NexA AI** Desktop Agent by **Rahkar Electronic Sahand**.  
+This wiki covers system architecture, autonomous OS tools, multi-agent family ecosystem, universal app automation, 3D avatar personas, API key rotation, self-learning mechanisms, long-term memory, and multimodal hardware integration.
 
 ---
 
 ## 📑 Wiki Table of Contents
 
-| Wiki Article | Description | Article Link |
+| Topic | Description | Link |
 | :--- | :--- | :--- |
-| 🏛️ **Architecture & Data Flow** | Layered modular architecture, state machine, worker threads & sequence diagrams | [Read Article](Architecture.en.md) |
-| 🛠️ **Tools & OS Capabilities** | PowerShell, Python execution, file I/O, web fetch & system diagnostics | [Read Article](Tools-and-Capabilities.en.md) |
-| 🎙️ **Multimodal Hardware Integration** | Microphone listening, webcam vision capture & speaker voice synthesis | [Read Article](Multimodal-Hardware.en.md) |
-| 🔑 **API Key Pool & Auto-Failover** | Dynamic key rotation, session preservation & multi-channel quota alerts | [Read Article](API-Key-Pool-and-Failover.en.md) |
-| 🎨 **Personas & 3D Avatars** | Male/Female personas and 4 volumetric 3D mascots (Bot, Neko, Orb, Panda) | [Read Article](Persona-and-3D-Avatars.en.md) |
-| 🧠 **Persistent Memory & Self-Learning** | Long-term memory store, auto reflection on failures & prompt injection | [Read Article](Self-Learning-and-Memory.en.md) |
-| 🌐 **Multi-AI Peer Collaboration** | Consult OpenAI, Claude, DeepSeek & Ollama, peer code reviews & bug discovery | [Read Article](Multi-AI-Collaboration.en.md) |
-| ❓ **Troubleshooting & FAQ** | Common issues, audio/webcam setup, API credentials & launch troubleshooting | [Read Article](Troubleshooting-and-FAQ.en.md) |
+| 🏛️ **Architecture & Data Flow** | 5-tier layered architecture, mascot state machine, async pipelines and sequence flows | [Read Guide](Architecture.en.md) |
+| 👨‍👩‍👧‍👦 **Family Ecosystem & App Automation** | Multi-agent family structure, macro learning engine, Windows UI Automation | [Read Guide](Family-Ecosystem-and-App-Automation.en.md) |
+| 🎙️ **Integrations, Email & Continuous VAD** | Hands-free Voice Activity Detection, IMAP/SMTP email client, Instagram studio | [Read Guide](Integrations-and-Voice-VAD.en.md) |
+| 🛠️ **Tools & OS Capabilities** | PowerShell, Python execution, file I/O, web scraping, and 24 autonomous agent tools | [Read Guide](Tools-and-Capabilities.en.md) |
+| 🎙️ **Multimodal Hardware Integration** | Microphone capture, OpenCV webcam, display grabs, and Windows SAPI speech output | [Read Guide](Multimodal-Hardware.en.md) |
+| 🔑 **API Key Pool & Failover** | Key rotation pool, quota monitoring, and lossless session migration | [Read Guide](API-Key-Pool-and-Failover.en.md) |
+| 🎨 **Personas & Vector Avatars** | 8 animated vector mascots and dynamic family personalization | [Read Guide](Persona-and-3D-Avatars.en.md) |
+| 🧠 **Self-Learning & Long-Term Memory** | Memory database, error analysis, and preventative rule synthesis | [Read Guide](Self-Learning-and-Memory.en.md) |
+| 🌐 **Multi-AI Peer Collaboration** | Peer consulting with OpenAI, Claude, DeepSeek, and local Ollama models | [Read Guide](Multi-AI-Collaboration.en.md) |
+| ❓ **Troubleshooting & FAQ** | Common issues, audio/webcam setup, API credentials, and quick start guide | [Read Guide](Troubleshooting-and-FAQ.en.md) |
 
 ---
 
-## ⚡ System Highlights
-- **Primary AI Model:** Google Gemini 2.5 Flash with full multimodal support (Text, Image, Audio) and multi-turn autonomous tool calling.
-- **Runtime Environment:** Python 3.14 on Windows, PyQt6 translucent glassmorphic interface, native Windows SAPI audio and OpenCV computer vision.
-- **Automated Verification:** 65 passing unit & integration tests in `tests/`.
+## ⚡ System Status & Metrics
+- **Primary AI Model:** Google Gemini 2.5 Flash with native multimodal reasoning (text, vision, audio) and Function Calling.
+- **Runtime Environment:** Python 3.14 with PyQt6 and lightweight vector QPainter graphics.
+- **Automated Test Suite Status:** 97/97 tests passing green in `tests/`.
 
 </div>

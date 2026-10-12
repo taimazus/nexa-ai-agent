@@ -4,111 +4,179 @@
 
 [English Version](Architecture.en.md) | **نسخه فارسی**
 
-این مستند تشریح‌کننده معماری ماژولار، چرخه حیات درخواست‌ها، نحوه هماهنگی بین رابط کاربری PyQt6، موتور هوش مصنوعی Gemini 2.5 Flash و ابزارهای سیستم‌عامل در پروژه دستیار هوشمند نوا است.
+این مستند تشریح‌کننده معماری ماژولار، چرخه حیات درخواست‌ها، اکوسیستم چندعاملی خانواده، پردازش صوتی پیوسته (VAD) و اتوماسیون دسکتاپ در پروژه دستیار هوشمند **«نِکسا» (NexA AI)** محصول شرکت **راهکار الکترونیک سهند** ([irres.ir](https://irres.ir)) است.
 
 ---
 
 ## ۱. نمای کلی لایه‌های سیستم (Layered Architecture)
 
-سیستم به ۴ لایه اصلی و مستقل تفکیک شده است:
+سیستم به ۵ لایه اصلی و مستقل تفکیک شده است:
 
 ```mermaid
 graph TD
     subgraph UI_Layer [لایه رابط کاربری - PyQt6]
-        Mascot[DesktopMascot - شکلک ۳بعدی دسکتاپ]
+        Mascot[DesktopMascot - شکلک ۳بعدی با میمیک و لب‌خوانی]
         Bubble[SpeechBubble - حباب گفتار شناور]
-        Chat[ChatWindow - مرکز فرمان و چت شیشه‌ای]
-        Settings[SettingsWindow - پنجره تنظیمات]
-        Tray[SystemTray - آیکون کنار ساعت ویندوز]
+        Chat[ChatWindow - مرکز فرمان و چت شیشه‌ای با دکمه مکالمه پیوسته]
+        Settings[SettingsWindow - پنجره ۶ تبی تنظیمات]
+        Tray[SystemTray - آیکون سیستم‌تری ویندوز]
     end
 
-    subgraph Coordination_Layer [لایه هماهنگی و پس‌زمینه]
-        Worker[AgentWorkerThread - ترد پس‌زمینه]
-        VoiceRec[AudioRecorder - ضبط صدا از میکروفون]
-        TTS[TTSEngine - گوینده صوتی SAPI]
+    subgraph Audio_Voice_Layer [لایه صوت، شنیدار و مکالمه پیوسته]
+        VAD[ContinuousVoiceListener - شنیدار پیوسته VAD و بیدارباش]
+        AudioRec[AudioRecorder - ضبط دستی صوت Wave]
+        TTS[TTSEngine - سنتز صوتی عصبی Gemini Neural TTS / SAPI]
     end
 
-    subgraph Core_Agent_Layer [لایه هسته هوش مصنوعی]
-        Engine[AgentEngine - مدیریت نشست جمینای]
-        KeyMgr[KeyManager - استخر کلیدها و چرخش خودکار]
-        MemMgr[MemoryManager - پایگاه حافظه بلندمدت]
+    subgraph Family_Ecosystem_Layer [لایه زیست‌بوم خانواده چندعاملی]
+        FamMgr[FamilyManager - مسیریاب و مدیر ارث‌بری مهارت‌ها]
+        Artin[آرتین - اپراتور اتوماسیون دسکتاپ و ماکروها]
+        Nila[نیلا - دستیار ایمیل و روابط عمومی]
+        Tara[تارا - طراح گرافیک و استراتژیست ریلز]
+        SamYar[سامیار - مهندس نرم‌افزار و باگ‌یابی کد]
+        Parents[نکسامهر و نکسانو - معماری سیستم و مربیگری]
+    end
+
+    subgraph Core_Agent_Layer [لایه هسته هوش مصنوعی و یادگیری]
+        Engine[AgentEngine - مدیریت سشن جمینای و ابزارها]
+        KeyMgr[KeyManager - استخر کلیدها و چرخش بدون قطعی]
+        MemMgr[MemoryManager - حافظه بلندمدت دائمی]
         LearnEng[LearningEngine - موتور خودآموزی از خطاها]
-        PersonaMgr[PersonaManager - مدیریت تم و شخصیت]
+        MultiAI[MultiAiCollaborator - همکاری با هوش‌های همکار/محلی]
+        CfgMgr[ServicesConfigManager - تنظیمات پایدار سیستم]
     end
 
-    subgraph System_Tools_Layer [لایه ابزارهای سیستم‌عامل]
-        Tools[PowerShell / Python / Files / Webcam / Vision / Diagnostics]
-        OS[(Windows 10/11 & Hardware)]
+    subgraph Automation_Integrations_Layer [لایه اتوماسیون و سرویس‌های خارجی]
+        AppCtrl[AppController - کنترل UI Automation و ماکروها]
+        EmailSvc[EmailService - کلاینت امن IMAP/SMTP ایمیل]
+        SocialMgr[SocialMediaManager - استودیو سناریونویسی و مرورگر اینستاگرام]
+        OSTools[PowerShell / Python / Files / Webcam / Vision / Diagnostics]
+        WinOS[(ویندوز ۱۰ و ۱۱ / سخت‌افزار)]
     end
 
-    Chat --> Worker
-    Worker --> Engine
+    Chat --> VAD
+    VAD --> Chat
+    Chat --> Engine
+    Engine --> FamMgr
+    FamMgr --> Artin
+    FamMgr --> Nila
+    FamMgr --> Tara
+    FamMgr --> SamYar
+    FamMgr --> Parents
+    Artin --> AppCtrl
+    Nila --> EmailSvc
+    Tara --> SocialMgr
     Engine --> KeyMgr
     Engine --> MemMgr
     Engine --> LearnEng
-    Engine --> PersonaMgr
-    Engine --> Tools
-    Tools --> OS
-    Worker --> Mascot
-    Worker --> Bubble
-    Worker --> TTS
-    VoiceRec --> Chat
+    Engine --> MultiAI
+    Engine --> CfgMgr
+    Engine --> OSTools
+    AppCtrl --> WinOS
+    EmailSvc --> WinOS
+    SocialMgr --> WinOS
+    OSTools --> WinOS
+    Engine --> Mascot
+    Engine --> Bubble
+    Engine --> TTS
+    TTS --> Mascot
 ```
 
 ---
 
-## ۲. چرخه حیات ارسال پیام و فراخوانی ابزار (Interaction Flow)
+## ۲. چرخه حیات مکالمه صوتی پیوسته (Hands-free VAD Lifecycle)
 
-هنگامی که کاربر پیامی صوتی، تصویری یا متنی ارسال می‌کند، گردش کار مطابق دیاگرام توالی زیر اجرا می‌گردد:
+گردش کار مکالمه آزاد انسان با انسان بدون فشردن دکمه:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as کاربر
+    participant Mic as میکروفون (Conexant ISST)
+    participant VAD as شنیدار پیوسته (VoiceDetector)
     participant Chat as پنجره چت (ChatWindow)
-    participant Worker as ترد پردازش (WorkerThread)
-    participant Mascot as شکلک دسکتاپ (Mascot)
-    participant Engine as موتور هوش مصنوعی (AgentEngine)
-    participant Gemini as سرور Google Gemini 2.5
-    participant Tools as ابزارهای سیستم (Tools)
+    participant Engine as موتور هوش نِکسا (AgentEngine)
     participant TTS as سیستم صوتی (TTSEngine)
+    participant Mascot as کاراکتر سه‌بعدی (Mascot)
 
-    User->>Chat: ارسال پیام / صوت میکروفون / عکس وب‌کم
-    Chat->>Mascot: تغییر وضعیت به "Thinking" (رادار چرخشی بنفش)
-    Chat->>Worker: اجرای ناهمگام در پس‌زمینه (Non-blocking)
-    Worker->>Engine: ارسال پیام و فایل‌های چندرسانه‌ای
-    Engine->>Gemini: فراخوانی API با سابقه و ابزارها
+    User->>Mic: شروع صحبت («نِکسا ایمیل‌های جدیدم رو بگو»)
+    Mic->>VAD: استریم بافرهای ۱۶ بیتی PCM (16kHz)
+    Note over VAD: عبور انرژی RMS از آستانه نویز + الحاق بافر ۳۰۰ میلی‌ثانیه‌ای پیشین
+    VAD->>Chat: ارسال رویداد speech_started
+    Chat->>Mascot: تغییر وضعیت به Thinking (حالت توجه و گوش دادن)
     
-    opt فراخوانی ابزار سیستمی (Function Calling)
-        Gemini-->>Engine: درخواست اجرای ابزار (مثلا execute_powershell یا capture_webcam)
-        Engine->>Mascot: تغییر وضعیت به "Working" (اکولایزر نارنجی/داده جریانی)
-        Engine->>Tools: اجرای دستور در ویندوز با انکودینگ UTF-8
-        Tools-->>Engine: بازگرداندن خروجی استاندارد
-        Engine->>Gemini: ارسال نتیجه به مدل برای ادامه تحلیل
-    end
-
-    Gemini-->>Engine: پاسخ نهایی هوش مصنوعی
-    Engine-->>Worker: متن نهایی پاسخ
-    Worker->>Mascot: تغییر وضعیت به "Speaking" / "Success"
-    Worker->>Chat: نمایش کارت پاسخ در تاریخچه چت
-    Worker->>TTS: پخش صوتی پاسخ از اسپیکر
-    TTS-->>User: پخش صدا (با لحن متناسب با جنسیت فعال)
+    User->>Mic: پایان جمله و مکث (~۰.۹ ثانیه سکوت)
+    Note over VAD: تشخیص سکوت پایدار > آستانه Silence Timeout
+    VAD->>VAD: بسته‌بندی صوت در قالب فایل Wave
+    VAD->>Chat: ارسال speech_completed(wav_path)
+    
+    Note over VAD,Chat: قفل آکوستیک: توقف موقت شنیدار تا نِکسا صدای خود را نشنود
+    Chat->>Engine: ارسال صوت برای Gemini 2.5 Flash
+    Engine->>Engine: تشخیص زبان، استخراج فرمان و تفویض به نیلا
+    Engine->>Chat: تولید پاسخ متنی
+    Chat->>TTS: سنتز صوتی روان فارسی
+    TTS->>Mascot: تحریک انیمیشن دهان و پلک (Lip-Sync)
+    TTS-->>User: پخش صدا از اسپیکر
+    
+    Note over TTS,VAD: پایان پخش صدا -> فعال‌سازی خودکار مجدد شنیدار VAD
+    Chat->>VAD: فراخوانی resume_listening()
+    Note over VAD: آماده شنیدن پاسخ بعدی کاربر بدون لمس ماوس یا کیبورد!
 ```
 
 ---
 
-## ۳. تفکیک مسئولیت‌های ماژول‌ها (Module Matrix)
+## ۳. چرخه کشف کنترل‌ها و اتوماسیون نرم‌افزارها (Universal App Automation Flow)
 
-- **`main.py`**: نقطه ورود برنامه، اتصال سیگنال‌های PyQt6، تنظیم موقعیت اولیه پنجره‌ها و مدیریت Tray Icon.
-- **`agent/engine.py`**: مدیریت سشن چت جمینای، تلفیق پرامپت‌ها، مدیریت چرخش کلیدها و دیکشنری ابزارها.
-- **`agent/tools.py`**: پیاده‌سازی امن توابع پاورشل، اجرای کد پایتون، عملیات دیسک، وب‌کم OpenCV، اسکرین‌شات Pillow و سلامت سیستم.
-- **`agent/key_manager.py`**: استخر کلیدهای API، مدیریت سهمیه، نرخ مصرف و چرخش بدون فراموشی تاریخچه.
-- **`agent/memory.py`**: مدیریت پایگاه دانش بلندمدت محلی در قالب JSON، جستجوی کلیدواژه‌ای و تزریق پویا به سیستم‌پرامپت.
-- **`agent/learning.py`**: موتور بازتاب بر خطاهای اجرا، استخراج قوانین اصلاحی و تضمین عدم تکرار اشتباهات گذشته.
-- **`agent/audio_recorder.py`**: رکورد صوت بافر بدون افت فشرده‌سازی با فرمت Wave از طریق `QMediaCaptureSession`.
-- **`agent/tts.py`**: سنتز گفتار محلی با رابط `win32com` و پشتیبانی از گوینده‌های David و Zira.
-- **`ui/mascot.py`**: رندر برداری سه‌بعدی بدون استفاده از تصاویر سنگین، پشتیبانی از ۴ سبک کاراکتر، شناوری و حالات حسی.
-- **`ui/chat_window.py`**: مرکز کنترل شیشه‌ای دارک، چیپ‌های دسترسی سریع، ویجت‌های کارت پاسخ و ابزارهای مالتی‌مدیا.
-- **`ui/settings_window.py`**: مدیریت تنظیمات کلیدها، ویرایش حافظه، پایش خودآموزی و انتخاب استایل کاراکتر.
+نحوه اتصال به نرم‌افزارهای دسکتاپ و اجرای فرآیندهای یادگرفته‌شده:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as کاربر
+    participant Chat as پنجره چت
+    participant Engine as موتور نِکسا
+    participant Artin as آرتین (عضو خانواده)
+    participant AppCtrl as کنترلر برنامه‌ها (AppController)
+    participant WinUIA as ویندوز (UIAutomationClient)
+    participant TargetApp as نرم‌افزار هدف (Notepad, Excel, ...)
+
+    User->>Chat: «نوت‌پد رو باز کن و متنی رو یادداشت کن»
+    Chat->>Engine: ارجاع درخواست
+    Engine->>Artin: تفویض به آرتین (متخصص اتوماسیون دسکتاپ)
+    Artin->>AppCtrl: فراخوانی execute_workflow(notepad_quick_note)
+    
+    alt نیاز به کشف دکمه‌ها و منوها
+        AppCtrl->>WinUIA: فراخوانی inspect_app_ui(Notepad)
+        WinUIA-->>AppCtrl: استخراج ساختار درختی (Buttons, Menus, Edit Fields)
+    end
+
+    AppCtrl->>TargetApp: اجرای گام ۱: باز کردن برنامه (launch)
+    AppCtrl->>TargetApp: اجرای گام ۲: فوکوس و تایپ متن با کلیدهای مجازی
+    AppCtrl->>TargetApp: اجرای گام ۳: فشردن میانبر Ctrl+S جهت ذخیره
+    TargetApp-->>AppCtrl: تکمیل عملیات
+    AppCtrl-->>Engine: گزارش موفقیت اجرا در ۳ مرحله
+    Engine-->>Chat: اعلام صوتی و متنی به کاربر
+```
+
+---
+
+## ۴. ماتریس مسئولیت ماژول‌های پروژه
+
+- **`main.py`**: نقطه ورود اصلی، اتصال سیگنال‌های رابط کاربری، همگام‌ساز تم تاریک/روشن و رنگ شاخص ویندوز.
+- **`agent/engine.py`**: موتور هماهنگ‌کننده کلان، تزریق پرامپت شخصیت فعال، چرخش کلیدها و دیکشنری ابزارها.
+- **`agent/voice_detector.py`**: ماژول شنیدار پیوسته (ContinuousVoiceListener)، محاسبه لحظه‌ای RMS انرژی، فیلتر نویز، تشخیص مکث و قفل آکوستیک.
+- **`agent/family/manager.py`**: مدیر اکوسیستم خانواده نِکسا، مسیریابی هوشمند پرامپت‌ها بر اساس تخصص، سیستم ترفیع و XP اعضا.
+- **`agent/family/app_controller.py`**: اتصال بومی به تمام نرم‌افزارهای ویندوز از طریق `UIAutomationClient`، یادگیری و اجرای ماکروها.
+- **`agent/integrations/email_client.py`**: کلاینت ایمیل IMAP4 SSL و SMTP با تفکیک ایمیل‌های مهم و بازگویی خلاصه صوتی.
+- **`agent/integrations/social_manager.py`**: طراح سناریوی ریلزهای اینستاگرام، نگارش کپشن و هشتگ، و کنترل مرورگر.
+- **`agent/integrations/config_manager.py`**: شناسایی هوشمند پیش‌فرض‌های سیستم و ذخیره پایدار در `data/integrations_config.json`.
+- **`agent/key_manager.py`**: مدیریت استخر کلیدهای Gemini با چرخش بدون قطعی در صورت خطای ۴۲۹.
+- **`agent/memory.py`**: پایگاه حافظه بلندمدت دائمی در قالب JSON.
+- **`agent/learning.py`**: تحلیل خطاها و استخراج قوانین طلایی برای جلوگیری همیشگی از تکرار اشتباه.
+- **`agent/multi_ai.py`**: پل ارتباطی با سایر هوش‌های ابری (GPT-4o, Claude) و محلی کاملاً آفلاین (Ollama, LM Studio).
+- **`agent/tts.py`**: گوینده هوشمند صوتی فارسی Gemini Neural TTS با فال‌بک آفلاین SAPI.
+- **`ui/mascot.py`**: موتور رندر ۸ کاراکتر سه‌بعدی، لب‌خوانی برداری هماهنگ با صدا و انیمیشن‌های احساسی.
+- **`ui/chat_window.py`**: پنجره شیشه‌ای چت، دکمه مکالمه پیوسته `🗣️`، کارت‌های ابزار و ویجت‌های مالتی‌مدیا.
+- **`ui/settings_window.py`**: پنل جامع ۶ تبی تنظیمات (شخصیت و خانواده، کلیدها، حافظه، یادگیری، همراهی، هوش‌های همکار).
 
 </div>
